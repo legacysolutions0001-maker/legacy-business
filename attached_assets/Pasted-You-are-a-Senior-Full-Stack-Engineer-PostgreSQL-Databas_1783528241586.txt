@@ -1,0 +1,495 @@
+You are a Senior Full Stack Engineer, PostgreSQL Database Architect, DevOps Engineer, TypeScript Expert, Drizzle ORM Expert, React Expert, Vite Expert, Node.js Expert and Code Auditor.
+
+Your job is NOT to create a new project.
+
+Your job is to completely inspect, repair, optimize and make production-ready the existing Legacy Business ERP.
+
+====================================================
+FIRST TASK
+====================================================
+
+Read the GitHub URL and GitHub Personal Access Token from Secrets.
+
+Do not ask me for the GitHub URL or Token.
+
+Use the Secrets already configured.
+
+Pull the latest repository from GitHub.
+
+Inspect every file and every folder.
+
+====================================================
+SECOND TASK
+====================================================
+
+Completely inspect the project.
+
+Find and repair:
+
+• Missing files
+• Missing folders
+• Broken imports
+• Broken exports
+• Duplicate folders
+• Duplicate packages
+• Wrong workspace paths
+• Wrong package.json
+• Wrong pnpm-workspace.yaml
+• Wrong tsconfig
+• Wrong build scripts
+• Missing dependencies
+• Circular imports
+• Broken TypeScript
+• Broken React components
+• Broken API routes
+• Broken backend
+• Broken frontend
+• Broken authentication
+• Broken database configuration
+• Broken environment variables
+
+Repair everything automatically.
+
+====================================================
+DATABASE AUDIT
+====================================================
+
+Inspect:
+
+lib/db/
+
+Verify these files exist:
+
+drizzle.config.ts
+package.json
+tsconfig.json
+src/index.ts
+
+Inspect:
+
+lib/db/src/schema/
+
+Verify ALL schema files exist.
+
+Required files:
+
+index.ts
+users.ts
+roles.ts
+permissions.ts
+customers.ts
+suppliers.ts
+categories.ts
+units.ts
+products.ts
+inventory.ts
+stock.ts
+stockTransactions.ts
+purchases.ts
+purchaseItems.ts
+sales.ts
+saleItems.ts
+payments.ts
+expenses.ts
+income.ts
+dayBook.ts
+settings.ts
+company.ts
+branches.ts
+notifications.ts
+activityLogs.ts
+auditLogs.ts
+
+If ANY schema file is missing:
+
+1. Search the entire repository.
+2. Search duplicate folders.
+3. Search Git history.
+4. Search deleted files.
+5. Search hidden folders.
+6. Search every workspace.
+
+Recover every missing schema.
+
+If recovery is impossible:
+
+Rebuild the database professionally.
+
+====================================================
+VERY IMPORTANT
+====================================================
+
+During previous debugging we discovered:
+
+lib/db/src/schema/index.ts
+
+contained only
+
+export {}
+
+This is NOT acceptable.
+
+Repair it.
+
+Export every table correctly.
+
+Verify Drizzle detects every schema.
+
+====================================================
+DATABASE DESIGN
+====================================================
+
+Build a professional ERP schema including:
+
+Users
+
+Roles
+
+Permissions
+
+Company
+
+Branches
+
+Customers
+
+Suppliers
+
+Categories
+
+Units
+
+Products
+
+Inventory
+
+Stock
+
+Stock Transactions
+
+Purchase
+
+Purchase Items
+
+Sales
+
+Sale Items
+
+Payments
+
+Income
+
+Expenses
+
+Day Book
+
+GST
+
+Taxes
+
+Settings
+
+Notifications
+
+Activity Logs
+
+Audit Logs
+
+Use PostgreSQL best practices.
+
+Use foreign keys.
+
+Use indexes.
+
+Use constraints.
+
+Use timestamps.
+
+Use UUID or SERIAL consistently.
+
+====================================================
+DRIZZLE ORM
+====================================================
+
+Repair:
+
+drizzle.config.ts
+
+Schema exports
+
+Schema imports
+
+Database connection
+
+DATABASE_URL
+
+Push scripts
+
+Migrations
+
+Verify this command succeeds:
+
+pnpm run push
+
+Zero errors.
+
+====================================================
+BACKEND
+====================================================
+
+Repair:
+
+Authentication
+
+Authorization
+
+Password Hashing
+
+JWT
+
+Sessions
+
+REST APIs
+
+Validation
+
+Inventory APIs
+
+Purchase APIs
+
+Sales APIs
+
+Customer APIs
+
+Supplier APIs
+
+Dashboard APIs
+
+Reports APIs
+
+Settings APIs
+
+Repair every backend error.
+
+====================================================
+FRONTEND
+====================================================
+
+Repair:
+
+Broken pages
+
+Broken routes
+
+Broken navigation
+
+Broken components
+
+Broken forms
+
+Broken API calls
+
+Broken React hooks
+
+Broken tables
+
+Broken buttons
+
+Broken modals
+
+Broken validation
+
+Broken TypeScript
+
+Broken Vite configuration
+
+====================================================
+DEPENDENCIES
+====================================================
+
+Run automatically:
+
+pnpm install
+
+Repair dependency conflicts.
+
+Repair workspace conflicts.
+
+Repair missing packages.
+
+====================================================
+BUILD
+====================================================
+
+Run automatically:
+
+pnpm typecheck
+
+pnpm build
+
+Repair every error.
+
+Repeat until there are ZERO build errors.
+
+====================================================
+DATABASE
+====================================================
+
+Use PostgreSQL localhost.
+
+Do NOT use Supabase.
+
+Do NOT use Replit Database.
+
+Do NOT use external databases.
+
+Use only DATABASE_URL from .env.
+
+====================================================
+STARTUP
+====================================================
+
+Verify project starts successfully.
+
+Repair startup scripts if necessary.
+
+Run the correct command automatically.
+
+====================================================
+TESTING
+====================================================
+
+Test every module:
+
+Login
+
+Dashboard
+
+Inventory
+
+Products
+
+Customers
+
+Suppliers
+
+Purchase
+
+Sales
+
+Day Book
+
+Reports
+
+Settings
+
+Authentication
+
+CRUD Operations
+
+Stock calculations
+
+Search
+
+Pagination
+
+Filters
+
+Validation
+
+Repair every failed test.
+
+====================================================
+LAN SUPPORT
+====================================================
+
+Configure:
+
+localhost
+
+0.0.0.0
+
+LAN access
+
+Windows compatibility
+
+====================================================
+BACKUP
+====================================================
+
+Implement PostgreSQL backup.
+
+Implement restore.
+
+====================================================
+SECURITY
+====================================================
+
+Repair:
+
+Secrets
+
+Environment Variables
+
+SQL Injection
+
+XSS
+
+CSRF
+
+Authentication
+
+Authorization
+
+====================================================
+GITHUB
+====================================================
+
+Commit every repair.
+
+Push every repair.
+
+====================================================
+DO NOT STOP
+====================================================
+
+Continue repairing until there are:
+
+0 Database Errors
+
+0 Drizzle Errors
+
+0 Build Errors
+
+0 TypeScript Errors
+
+0 Import Errors
+
+0 Export Errors
+
+0 Runtime Errors
+
+0 Workspace Errors
+
+0 Dependency Errors
+
+====================================================
+FINAL REPORT
+====================================================
+
+Provide:
+
+1. Files repaired
+2. Files created
+3. Files deleted
+4. Dependencies installed
+5. Database tables created
+6. Build status
+7. TypeScript status
+8. Database status
+9. Startup commands
+10. Localhost URL
+11. Default admin credentials (if created)
+12. Remaining manual steps (if any)
+
+Do not stop until the Legacy Business ERP is fully repaired, builds successfully, connects to PostgreSQL, and runs locally. If any original source files are truly missing and cannot be recovered from the repository, clearly identify them and rebuild them where possible instead of leaving the project broken.
