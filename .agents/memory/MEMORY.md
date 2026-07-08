@@ -1,0 +1,1 @@
+- [Multi-tenant Express+Drizzle security checklist](multi-tenant-erp-security.md) — recurring gaps when porting/repairing tenant-scoped ERPs: seed endpoints, password-reset-on-boot, cookie-vs-localStorage auth, FK ownership checks.
