@@ -121,6 +121,15 @@ router.post("/stock-batches", requireAuth, async (req, res) => {
   if (!companyId) { res.status(403).json({ error: "Company required" }); return; }
   const { productId, variantId, quantityReceived, purchasePrice, sellingPrice, batchNumber, manufacturingDate, expiryDate, warehouse, notes } = req.body;
   if (!productId || !quantityReceived || Number(quantityReceived) <= 0) { res.status(400).json({ error: "productId and quantityReceived required" }); return; }
+  // Reject batches against a product/variant that doesn't belong to this
+  // company — otherwise a caller could attach stock records to another
+  // tenant's product by guessing its id.
+  const [ownedProduct] = await db.select({ id: productsTable.id }).from(productsTable).where(and(eq(productsTable.id, Number(productId)), eq(productsTable.companyId, companyId))).limit(1);
+  if (!ownedProduct) { res.status(404).json({ error: "Product not found" }); return; }
+  if (variantId) {
+    const [ownedVariant] = await db.select({ id: productVariantsTable.id }).from(productVariantsTable).where(and(eq(productVariantsTable.id, Number(variantId)), eq(productVariantsTable.companyId, companyId))).limit(1);
+    if (!ownedVariant) { res.status(404).json({ error: "Variant not found" }); return; }
+  }
   const [batch] = await db.insert(stockBatchesTable).values({ companyId, productId: Number(productId), variantId: variantId ? Number(variantId) : null, quantityReceived: Number(quantityReceived), currentQty: Number(quantityReceived), purchasePrice: String(purchasePrice ?? 0), sellingPrice: String(sellingPrice ?? 0), batchNumber: batchNumber || null, manufacturingDate: manufacturingDate || null, expiryDate: expiryDate || null, warehouse: warehouse || null, notes: notes || null, isActive: 1 }).returning();
   if (variantId) {
     await db.execute(sql`UPDATE lb_product_variants SET current_stock = current_stock + ${Number(quantityReceived)}, selling_price = ${String(sellingPrice ?? 0)}, purchase_price = ${String(purchasePrice ?? 0)}, batch_number = ${batchNumber || null}, expiry_date = ${expiryDate || null} WHERE id = ${Number(variantId)} AND company_id = ${companyId}`);
@@ -237,6 +246,10 @@ router.post("/product-variants", requireAuth, async (req, res) => {
   const companyId = req.auth!.companyId;
   if (!companyId) { res.status(403).json({ error: "Company required" }); return; }
   const d = req.body;
+  // Same ownership check as /stock-batches: don't let a variant be attached
+  // to a product owned by a different company.
+  const [ownedProduct] = await db.select({ id: productsTable.id }).from(productsTable).where(and(eq(productsTable.id, Number(d.productId)), eq(productsTable.companyId, companyId))).limit(1);
+  if (!ownedProduct) { res.status(404).json({ error: "Product not found" }); return; }
   const [row] = await db.insert(productVariantsTable).values({ companyId, productId: d.productId, variantName: d.variantName || `${d.size}${d.sizeUnit || ""}`, size: d.size || null, sizeUnit: d.sizeUnit || null, packaging: d.packaging || null, barcode: d.barcode || null, sku: d.sku || null, purchasePrice: String(d.purchasePrice ?? 0), sellingPrice: String(d.sellingPrice ?? 0), currentStock: Number(d.currentStock ?? 0), minStock: Number(d.minStock ?? 5), batchNumber: d.batchNumber || null, expiryDate: d.expiryDate || null, isActive: 1 }).returning();
   res.status(201).json({ ...row, sellingPrice: toNum(row.sellingPrice), purchasePrice: toNum(row.purchasePrice) });
 });
