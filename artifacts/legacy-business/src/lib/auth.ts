@@ -1,5 +1,4 @@
 const BASE = "";
-const TOKEN_KEY = "lb_auth_token";
 
 export interface AuthUser {
   id: number;
@@ -28,20 +27,11 @@ export interface AuthCompany {
   plan: string;
 }
 
-function getToken(): string | null {
-  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
-}
-
-function setToken(token: string | null) {
-  try {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
-  } catch {}
-}
-
-export function clearAllAuthData() {
-  try { localStorage.removeItem(TOKEN_KEY); } catch {}
-}
+// Session state lives entirely in the server-set httpOnly cookie (`lb_token`).
+// The client never stores or reads the token itself — that's the point of
+// httpOnly cookies: they're inaccessible to JavaScript, which limits the
+// blast radius of an XSS bug. `credentials: "include"` is what sends the
+// cookie along with each request.
 
 export async function login(username: string, password: string, companyCode?: string): Promise<{ user: AuthUser; company?: AuthCompany }> {
   const res = await fetch(`${BASE}/api/auth/login`, {
@@ -54,13 +44,10 @@ export async function login(username: string, password: string, companyCode?: st
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Login failed");
   }
-  const data = await res.json();
-  if (data.token) setToken(data.token);
-  return data;
+  return res.json();
 }
 
 export async function logout(): Promise<void> {
-  clearAllAuthData();
   try {
     await fetch(`${BASE}/api/auth/logout`, {
       method: "POST",
@@ -68,25 +55,16 @@ export async function logout(): Promise<void> {
       headers: { "Content-Type": "application/json" },
     });
   } catch {
-    // Ignore errors — local state is cleared regardless
+    // Ignore errors — the server clears the cookie regardless
   }
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export async function getMe(): Promise<{ user: AuthUser; company?: AuthCompany } | null> {
   try {
     const res = await fetch(`${BASE}/api/auth/me`, {
       credentials: "include",
-      headers: getAuthHeaders(),
     });
-    if (!res.ok) {
-      clearAllAuthData();
-      return null;
-    }
+    if (!res.ok) return null;
     const contentType = res.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) return null;
     return res.json();
@@ -101,7 +79,6 @@ export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...getAuthHeaders(),
       ...(init?.headers ?? {}),
     },
   });

@@ -35,7 +35,9 @@ export function verifyToken(token: string): AuthPayload | null {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const token = req.cookies?.lb_token || req.headers.authorization?.replace("Bearer ", "");
+  // Cookie-only session: the token never leaves the server in a form
+  // JavaScript can read, so there is no Bearer-header fallback to accept.
+  const token = req.cookies?.lb_token;
   if (!token) {
     res.status(401).json({ error: "Unauthorized" });
     return;

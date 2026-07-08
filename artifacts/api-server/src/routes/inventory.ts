@@ -218,9 +218,11 @@ router.patch("/products/:id", requireAuth, async (req, res) => {
 
 router.delete("/products/:id", requireAuth, async (req, res) => {
   const companyId = req.auth!.companyId;
-  await db.delete(productVariantsTable).where(eq(productVariantsTable.productId, parseInt(req.params.id as string)));
-  await db.delete(stockBatchesTable).where(and(eq(stockBatchesTable.productId, parseInt(req.params.id as string)), eq(stockBatchesTable.companyId, companyId!)));
-  await db.delete(productsTable).where(and(eq(productsTable.id, parseInt(req.params.id as string)), eq(productsTable.companyId, companyId!)));
+  if (!companyId) { res.status(403).json({ error: "Company required" }); return; }
+  const productId = parseInt(req.params.id as string);
+  await db.delete(productVariantsTable).where(and(eq(productVariantsTable.productId, productId), eq(productVariantsTable.companyId, companyId)));
+  await db.delete(stockBatchesTable).where(and(eq(stockBatchesTable.productId, productId), eq(stockBatchesTable.companyId, companyId)));
+  await db.delete(productsTable).where(and(eq(productsTable.id, productId), eq(productsTable.companyId, companyId)));
   res.sendStatus(204);
 });
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { getMe, logout as doLogout, clearAllAuthData, type AuthUser, type AuthCompany } from "../lib/auth";
+import { getMe, logout as doLogout, type AuthUser, type AuthCompany } from "../lib/auth";
 import { queryClient } from "../lib/queryClient";
 
 interface AuthState {
@@ -38,13 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         setCompany(null);
-        clearAllAuthData();
       }
     } catch {
       if (isLoggingOut.current) return;
       setUser(null);
       setCompany(null);
-      clearAllAuthData();
     } finally {
       setIsLoading(false);
     }
@@ -56,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setCompany(null);
     queryClient.clear();
-    clearAllAuthData();
     try {
       await doLogout();
     } catch {

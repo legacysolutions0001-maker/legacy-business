@@ -98,6 +98,9 @@ router.post("/auth/login", async (req, res) => {
     name: user.name,
   });
 
+  // Session lives only in the httpOnly cookie. Do not echo the token back in
+  // the response body — that would let any injected script (XSS) read the
+  // token and defeats the point of httpOnly.
   res.cookie(COOKIE_NAME, token, COOKIE_OPTS);
   res.json({
     user: {
@@ -109,7 +112,6 @@ router.post("/auth/login", async (req, res) => {
       companyId: user.companyId,
     },
     company,
-    token,
   });
 });
 

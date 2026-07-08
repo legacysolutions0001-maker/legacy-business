@@ -83,7 +83,7 @@ router.post("/invoices", requireAuth, async (req, res) => {
   }).returning();
 
   if ((data.paymentStatus === "paid" || data.status === "paid") && data.customerId) {
-    await db.execute(sql`UPDATE lb_customers SET total_revenue = COALESCE(total_revenue, 0) + ${total} WHERE id = ${data.customerId}`);
+    await db.execute(sql`UPDATE lb_customers SET total_revenue = COALESCE(total_revenue, 0) + ${total} WHERE id = ${data.customerId} AND company_id = ${companyId}`);
     await db.insert(paymentsTable).values({ companyId, invoiceId: row.id, entityType: "customer", entityId: data.customerId, entityName: data.customerName, amount: String(total), method: data.paymentMethod || "cash", paidAt: data.invoiceDate || new Date().toISOString().split("T")[0] });
   }
 

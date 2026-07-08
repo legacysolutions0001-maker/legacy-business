@@ -22,14 +22,23 @@ function pastDate(daysAgo: number) {
   return fmtDate(d);
 }
 
-export async function ensureSuperAdmin() {
+// `forceResetPassword` is only ever true when explicitly requested via the
+// master-key-protected /seed/repair-super-admin endpoint. On normal server
+// boot we must NOT overwrite an existing super admin's password — otherwise
+// any operator who changed their password gets silently reset to the
+// env/default password on every restart.
+export async function ensureSuperAdmin(forceResetPassword = false) {
   const saUsername = (process.env.SUPER_ADMIN_USERNAME || "bhullar01").toLowerCase();
   const saPassword = process.env.SUPER_ADMIN_PASSWORD || "Bhullar_01";
-  const superHash = await bcrypt.hash(saPassword, 10);
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, saUsername)).limit(1);
   if (existing) {
-    await db.update(usersTable).set({ passwordHash: superHash, isActive: true, role: "super_admin" }).where(eq(usersTable.username, saUsername));
+    const update: Record<string, unknown> = { isActive: true, role: "super_admin" };
+    if (forceResetPassword) {
+      update.passwordHash = await bcrypt.hash(saPassword, 10);
+    }
+    await db.update(usersTable).set(update).where(eq(usersTable.username, saUsername));
   } else {
+    const superHash = await bcrypt.hash(saPassword, 10);
     await db.insert(usersTable).values({
       username: saUsername,
       passwordHash: superHash,
@@ -58,7 +67,17 @@ export async function ensureSuperAdmin() {
   }
 }
 
-router.post("/seed/init", async (req, res) => {
+// Demo-data seeding must never be reachable in production — it's an
+// unauthenticated bootstrap tool intended for local/dev setup only.
+function blockInProduction(req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  next();
+}
+
+router.post("/seed/init", blockInProduction, async (req, res) => {
   try {
     const today = fmtDate(new Date());
     await ensureSuperAdmin();
@@ -162,7 +181,7 @@ router.post("/seed/init", async (req, res) => {
       }
     }
 
-    res.json({ success: true, message: "Database seeded successfully", companyCode: "DEMO01", ownerLogin: { username: "demo_owner", password: "Demo@123" }, superAdmin: { username: "bhullar01", password: "Bhullar_01" } });
+    res.json({ success: true, message: "Database seeded successfully. See replit.md for demo login credentials." });
   } catch (err: any) {
     const causeChain: string[] = [];
     let cur: unknown = err?.cause;
@@ -177,7 +196,7 @@ router.post("/seed/init", async (req, res) => {
 });
 
 // Massive demo data endpoint — call this after /seed/init
-router.post("/seed/demo", async (req, res) => {
+router.post("/seed/demo", blockInProduction, async (req, res) => {
   try {
     const [company] = await db.select().from(companiesTable).where(eq(companiesTable.code, "DEMO01")).limit(1);
     if (!company) {
@@ -534,7 +553,7 @@ router.post("/seed/repair-super-admin", async (req, res) => {
     return;
   }
   try {
-    await ensureSuperAdmin();
+    await ensureSuperAdmin(true);
     const saUsername = (process.env.SUPER_ADMIN_USERNAME || "bhullar01").toLowerCase();
     res.json({ success: true, message: `Super admin '${saUsername}' created/updated successfully` });
   } catch (err: any) {
