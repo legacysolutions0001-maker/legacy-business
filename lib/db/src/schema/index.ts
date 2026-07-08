@@ -1,20 +1,30 @@
-// Export your models here. Add one export per file
-// export * from "./posts";
-//
-// Each model/table should ideally be split into different files.
-// Each model/table should define a Drizzle table, insert schema, and types:
-//
-//   import { pgTable, text, serial } from "drizzle-orm/pg-core";
-//   import { createInsertSchema } from "drizzle-zod";
-//   import { z } from "zod/v4";
-//
-//   export const postsTable = pgTable("posts", {
-//     id: serial("id").primaryKey(),
-//     title: text("title").notNull(),
-//   });
-//
-//   export const insertPostSchema = createInsertSchema(postsTable).omit({ id: true });
-//   export type InsertPost = z.infer<typeof insertPostSchema>;
-//   export type Post = typeof postsTable.$inferSelect;
-
-export {}
+export * from "./activity";
+export * from "./appointments";
+export * from "./attendance";
+export * from "./audit-log";
+export * from "./cash-bank";
+export * from "./companies";
+export * from "./customers";
+export * from "./daybook";
+export * from "./deals";
+export * from "./employees";
+export * from "./eway-bills";
+export * from "./expenses";
+export * from "./feature-toggles";
+export * from "./invoices";
+export * from "./leads";
+export * from "./leaves";
+export * from "./messages";
+export * from "./notifications";
+export * from "./payments";
+export * from "./products";
+export * from "./projects";
+export * from "./purchase";
+export * from "./returns";
+export * from "./salary";
+export * from "./settings";
+export * from "./stock-batches";
+export * from "./subscriptions";
+export * from "./suppliers";
+export * from "./tasks";
+export * from "./users";

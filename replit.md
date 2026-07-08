@@ -1,36 +1,46 @@
-# [Project name]
+# Legacy Business ERP
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A multi-tenant ERP for Indian small/medium businesses: inventory, invoicing, purchase orders, CRM, HR/payroll, e-way bills, day book, cash & bank ledger, and reporting.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
+- `pnpm --filter @workspace/api-server run dev` — run the API server
+- `pnpm --filter @workspace/legacy-business run dev` — run the ERP frontend
+- `pnpm run typecheck` — full typecheck across all packages (use this to verify artifacts, not `build` — `build` requires workflow-provided `PORT`/`BASE_PATH`)
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `curl -X POST <api>/api/seed/init` — seed a demo company + super admin (safe to re-run; upserts)
+- Required env: `DATABASE_URL` — Postgres connection string (provisioned via Replit's built-in Postgres)
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
+- API: Express 5, JWT auth (`jsonwebtoken` + `bcryptjs`), cookie sessions, pino logging
+- DB: PostgreSQL + Drizzle ORM (~30 tables: companies, users, customers, suppliers, products, invoices, purchase orders, salary, expenses, daybook, e-way bills, cash/bank, subscriptions, projects, CRM leads/deals, HR/attendance, etc.)
+- Frontend: React + Vite, shadcn/radix UI, wouter routing, TanStack Query
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/db/src/schema/*.ts` — Drizzle schema, one file per domain area
+- `artifacts/api-server/src/routes/*.ts` — one Express router file per domain area (customers, inventory, invoices, purchase, HR, CRM, etc.)
+- `artifacts/api-server/src/routes/seed.ts` — `ensureSuperAdmin()` (runs on boot) and `/api/seed/init`, `/api/seed/demo` demo-data seeders
+- `artifacts/legacy-business/src/pages/*.tsx` — one page per ERP module
+- `artifacts/legacy-business/src/contexts/AuthContext.tsx` — client auth/session state
+- `lib/api-spec/openapi.yaml` — source-of-truth API contract used for codegen
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Multi-tenant by `companyId` — most tables scope data to a company; `super_admin` role (no `companyId`) manages companies/subscriptions across tenants via `/api/super/*`.
+- Auth is a custom JWT-in-httpOnly-cookie scheme (`lb_token`), not Replit Auth/Clerk — this predates the current session and was kept as-is per the existing codebase.
+- The OpenAPI spec (`lib/api-spec/openapi.yaml`) covers only a subset of routes (health, leads, deals, expenses, leaves, projects, tasks, appointments); most ERP routes (inventory, invoices, purchase, customers, etc.) are hand-written and not yet reflected in the spec/codegen. Treat the spec as incomplete, not authoritative, until reconciled.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Company owners sign in with a company code + username/password to manage inventory, sales invoices, purchases, customers/suppliers, CRM pipeline, HR/payroll, day book, e-way bills, cash & bank ledgers, and reports. A separate super-admin login manages companies and subscriptions platform-wide.
 
 ## User preferences
 
@@ -38,7 +48,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Default super admin credentials come from `SUPER_ADMIN_USERNAME`/`SUPER_ADMIN_PASSWORD` env vars, falling back to `bhullar01` / `Bhullar_01` if unset — change these via secrets for any real deployment.
+- After a fresh DB push, call `POST /api/seed/init` once to get a working demo company/login; otherwise there is no company/user data to sign in with.
 
 ## Pointers
 

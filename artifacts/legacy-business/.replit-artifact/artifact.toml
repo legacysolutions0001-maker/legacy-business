@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Legacy Business"
+version = "1.0.0"
+id = "artifacts/legacy-business"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21973
+
+[services.development]
+run = "pnpm --filter @workspace/legacy-business run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/legacy-business", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/legacy-business/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21973"
+BASE_PATH = "/"
