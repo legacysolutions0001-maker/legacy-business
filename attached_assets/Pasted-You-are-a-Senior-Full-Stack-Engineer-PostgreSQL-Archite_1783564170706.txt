@@ -1,0 +1,292 @@
+You are a Senior Full Stack Engineer, PostgreSQL Architect, Drizzle ORM Expert, React Expert, Node.js Expert, TypeScript Expert, and QA Engineer.
+
+Your task is NOT to create a new ERP.
+
+Your task is to COMPLETE and REPAIR the existing Legacy Business ERP project.
+
+====================================================
+FIRST
+====================================================
+
+Read the GitHub URL and GitHub Personal Access Token from Secrets.
+
+Pull the latest repository.
+
+Inspect every file and every folder.
+
+Do NOT ask me for GitHub credentials.
+
+====================================================
+COMPLETE PROJECT AUDIT
+====================================================
+
+Scan the entire repository.
+
+Check for:
+
+• Missing files
+• Missing folders
+• Broken imports
+• Broken exports
+• Duplicate files
+• Duplicate folders
+• Wrong package.json
+• Wrong pnpm-workspace.yaml
+• Wrong tsconfig
+• Wrong Vite configuration
+• Wrong Drizzle configuration
+• Missing dependencies
+• Build errors
+• Runtime errors
+
+Repair everything automatically.
+
+====================================================
+DATABASE AUDIT
+====================================================
+
+Inspect:
+
+lib/db/
+
+Check:
+
+drizzle.config.ts
+package.json
+tsconfig.json
+src/index.ts
+src/schema/
+
+Verify every schema file.
+
+The following files MUST exist if referenced anywhere in the project:
+
+roles.ts
+permissions.ts
+categories.ts
+units.ts
+inventory.ts
+stock.ts
+stockTransactions.ts
+sales.ts
+saleItems.ts
+purchaseItems.ts
+income.ts
+branches.ts
+
+If any of these are referenced but missing:
+
+• Search the repository.
+• Search duplicate folders.
+• Search Git history.
+• Search deleted files.
+
+If still missing:
+
+Create professional Drizzle schema files that match the existing backend and frontend code.
+
+Update:
+
+lib/db/src/schema/index.ts
+
+Export every schema correctly.
+
+====================================================
+TYPESCRIPT
+====================================================
+
+Check every import.
+
+Repair every broken import.
+
+Repair every @workspace/* alias.
+
+Repair tsconfig path mappings.
+
+Run:
+
+pnpm typecheck
+
+Fix every TypeScript error.
+
+Repeat until ZERO errors remain.
+
+====================================================
+BUILD
+====================================================
+
+Run:
+
+pnpm install
+
+pnpm build
+
+Fix every error.
+
+Repeat until build succeeds.
+
+====================================================
+DATABASE
+====================================================
+
+Verify:
+
+DATABASE_URL
+
+SESSION_SECRET
+
+PORT
+
+NODE_ENV
+
+Verify:
+
+pnpm run push
+
+If Drizzle fails:
+
+Fix schema.
+
+Fix exports.
+
+Fix configuration.
+
+Repeat until database tables are created successfully.
+
+====================================================
+BACKEND
+====================================================
+
+Run backend locally.
+
+Repair every API.
+
+Test:
+
+Login
+
+Authentication
+
+Customers
+
+Suppliers
+
+Inventory
+
+Products
+
+Sales
+
+Purchases
+
+Day Book
+
+Reports
+
+Settings
+
+Repair every failing API.
+
+====================================================
+FRONTEND
+====================================================
+
+Run frontend locally.
+
+Repair:
+
+Broken pages
+
+Broken routes
+
+Broken buttons
+
+Broken forms
+
+Broken tables
+
+Broken API calls
+
+Broken navigation
+
+Broken React components
+
+Repeat until the frontend loads without errors.
+
+====================================================
+LOCAL TESTING
+====================================================
+
+Start the application locally.
+
+Verify:
+
+Frontend starts.
+
+Backend starts.
+
+Database connects.
+
+Login works.
+
+Dashboard loads.
+
+Inventory CRUD works.
+
+Products CRUD works.
+
+Customers CRUD works.
+
+Suppliers CRUD works.
+
+Sales CRUD works.
+
+Purchases CRUD works.
+
+Day Book works.
+
+Reports load.
+
+Settings save correctly.
+
+====================================================
+FINAL QA
+====================================================
+
+Do NOT stop after fixing one error.
+
+Continue fixing until:
+
+✔ No TypeScript errors
+
+✔ No Build errors
+
+✔ No Drizzle errors
+
+✔ No Database errors
+
+✔ No Import errors
+
+✔ No Runtime errors
+
+✔ No API errors
+
+✔ No React errors
+
+====================================================
+FINAL REPORT
+====================================================
+
+Only after testing locally, provide:
+
+1. Files added
+2. Files repaired
+3. Files deleted
+4. Dependencies added
+5. Database tables created
+6. Remaining warnings (if any)
+7. Commands required to run locally
+8. Whether the ERP is fully functional
+
+IMPORTANT:
+Do not say "completed" until the project builds successfully, the database is created successfully, the backend starts successfully, the frontend starts successfully, and all major ERP modules are tested locally.

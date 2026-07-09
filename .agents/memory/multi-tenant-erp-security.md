@@ -1,12 +1,37 @@
 ---
 name: Multi-tenant ERP security checklist
-description: Recurring security gaps to check for when repairing/porting a multi-tenant Express + Drizzle app (e.g. company-scoped ERP/SaaS backends).
+description: Recurring security gaps when building/repairing tenant-scoped ERP routes in this project (Legacy Business ERP)
 ---
 
-When repairing or completing a multi-tenant backend (companyId/tenantId-scoped tables), audit for these patterns specifically — they showed up together in one real port and are easy to miss individually:
+## Rules to apply on every new route or stock-mutation
 
-- **Seed/bootstrap endpoints must be blocked in production.** An unauthenticated `/seed/init`-style route that creates a default admin and returns credentials in the response is a takeover path if it ever reaches a deployed environment. Gate with `NODE_ENV !== "production"` (404 in prod) and never echo passwords in the response.
-- **Boot-time "ensure admin exists" logic must not reset an existing password.** A common bug: `ensureSuperAdmin()`-style functions upsert the admin user on every server start and overwrite the password hash even when the row already exists, silently undoing any password change on every restart. Only set the password hash on first creation; require an explicit, separately-authenticated "repair" action to force a reset.
-- **Prefer cookie-only sessions over cookie + localStorage + Bearer.** If a JWT is both set as an httpOnly cookie and also returned in the response body for localStorage storage, the localStorage copy is readable by any injected script and defeats httpOnly's XSS protection. Pick one (cookie-only for same-origin web apps) and remove the other path from both client and server.
-- **Every raw SQL `UPDATE ... WHERE id = X` on a tenant-scoped table needs `AND company_id = :companyId` too**, not just the read-path queries — it's easy to scope `SELECT`s correctly while missing it on a side-effect `UPDATE` (e.g. incrementing a customer's revenue counter after an invoice, or decrementing stock). Grep for raw `sql`/`db.execute` calls specifically; ORM query builders make this harder to forget but raw SQL doesn't.
-- **Validate foreign-key ownership on write, not just the row being written.** A `POST` that creates a child record (e.g. a stock batch or product variant) scoped to the caller's own `companyId` can still reference a `productId`/parent id belonging to a *different* tenant if that id isn't itself verified to belong to the caller's company before the insert.
+### 1. Seed / admin endpoints — never expose in production
+- Gate `/api/seed` and `/api/super` with `NODE_ENV !== "production"` OR a SESSION_SECRET master key check.
+- Never reset super-admin password on every boot — only when `forceResetPassword` flag is explicitly passed.
+
+### 2. Auth storage — cookies only, no localStorage
+- Tokens must live in HttpOnly cookies. Never return a bearer token to the client. LocalStorage is XSS-accessible.
+
+### 3. Every query scoped by companyId
+- Raw SQL UPDATEs must include `AND company_id = ${companyId}` — Drizzle `.where()` alone doesn't protect raw `db.execute(sql...)` calls.
+- Post-update reads (e.g. fetching `currentStock` for a ledger entry) must also include `eq(table.companyId, companyId)` — not just `eq(table.id, id)`.
+
+### 4. FK ownership validation on writes
+- Before inserting a child record that references a parent (e.g. stock batch → product, variant → product, ledger → product), SELECT the parent with both `id` AND `companyId` filters. If not found, return 404.
+- Item loops in invoices/purchase/returns must validate each `item.productId` belongs to the caller's company before updating stock or writing ledger rows.
+
+### 5. Numeric param validation
+- Every `:id` route param and numeric query param (`productId`, `limit`, `offset`) must be `parseInt`-ed and checked with `isNaN` → return 400 immediately. Never pass a NaN silently to Drizzle.
+
+### 6. Enum query param validation
+- For `type` or `status` query params, validate against an explicit Set of valid values and return 400 on unknown values.
+
+### 7. Stock ledger inserts — non-blocking
+- Wrap `db.insert(stockTransactionsTable)` in `.catch(() => {})` so a ledger failure never kills the main transaction response.
+
+### 8. External service references
+- Never hardcode cloud service URLs (render.com, supabase.co, neon.tech, railway.app, etc.) in source code. Use env vars or remove them. The app targets localhost PostgreSQL only.
+
+**Why:** All of the above were found as real vulnerabilities in code review passes on this project. Each rule maps to a confirmed finding that required a fix.
+
+**How to apply:** Read this file at the start of any new route file or stock-mutation change. Run through checklist items 3–7 for every new handler before committing.
