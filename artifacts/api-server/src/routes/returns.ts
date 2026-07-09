@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, salesReturnsTable, purchaseReturnsTable, productsTable, productVariantsTable } from "@workspace/db";
+import { db, salesReturnsTable, purchaseReturnsTable, productsTable, productVariantsTable, stockTransactionsTable } from "@workspace/db";
 import { eq, sql, and, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -48,11 +48,19 @@ router.post("/sales-returns", requireAuth, async (req, res) => {
   }).returning();
 
   for (const item of items) {
-    if (item.productId && item.quantity) {
-      await db.execute(sql`UPDATE lb_products SET current_stock = current_stock + ${item.quantity} WHERE id = ${item.productId} AND company_id = ${companyId}`);
+    const pid = Number(item.productId);
+    const qty = Number(item.quantity);
+    if (item.productId && qty > 0) {
+      const [owned] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      if (!owned) continue;
+      await db.execute(sql`UPDATE lb_products SET current_stock = current_stock + ${qty} WHERE id = ${pid} AND company_id = ${companyId}`);
+      const [p] = await db.select({ currentStock: productsTable.currentStock }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      await db.insert(stockTransactionsTable).values({ companyId, productId: pid, variantId: item.variantId ? Number(item.variantId) : null, type: "return_in", quantityChange: qty, balanceAfter: p?.currentStock ?? 0, refType: "return", refId: row.id, userId: (req as any).auth?.userId }).catch(() => {/* non-blocking */});
     }
-    if (item.variantId && item.quantity) {
-      await db.execute(sql`UPDATE lb_product_variants SET current_stock = current_stock + ${item.quantity} WHERE id = ${item.variantId} AND company_id = ${companyId}`);
+    if (item.variantId && qty > 0) {
+      await db.execute(sql`UPDATE lb_product_variants SET current_stock = current_stock + ${qty} WHERE id = ${Number(item.variantId)} AND company_id = ${companyId}`);
     }
   }
 
@@ -124,11 +132,19 @@ router.post("/purchase-returns", requireAuth, async (req, res) => {
   }).returning();
 
   for (const item of items) {
-    if (item.productId && item.quantity) {
-      await db.execute(sql`UPDATE lb_products SET current_stock = GREATEST(0, current_stock - ${item.quantity}) WHERE id = ${item.productId} AND company_id = ${companyId}`);
+    const pid = Number(item.productId);
+    const qty = Number(item.quantity);
+    if (item.productId && qty > 0) {
+      const [owned] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      if (!owned) continue;
+      await db.execute(sql`UPDATE lb_products SET current_stock = GREATEST(0, current_stock - ${qty}) WHERE id = ${pid} AND company_id = ${companyId}`);
+      const [p] = await db.select({ currentStock: productsTable.currentStock }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      await db.insert(stockTransactionsTable).values({ companyId, productId: pid, variantId: item.variantId ? Number(item.variantId) : null, type: "return_out", quantityChange: -qty, balanceAfter: p?.currentStock ?? 0, refType: "return", refId: row.id, userId: (req as any).auth?.userId }).catch(() => {/* non-blocking */});
     }
-    if (item.variantId && item.quantity) {
-      await db.execute(sql`UPDATE lb_product_variants SET current_stock = GREATEST(0, current_stock - ${item.quantity}) WHERE id = ${item.variantId} AND company_id = ${companyId}`);
+    if (item.variantId && qty > 0) {
+      await db.execute(sql`UPDATE lb_product_variants SET current_stock = GREATEST(0, current_stock - ${qty}) WHERE id = ${Number(item.variantId)} AND company_id = ${companyId}`);
     }
   }
 

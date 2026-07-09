@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, purchaseOrdersTable, productsTable, suppliersTable } from "@workspace/db";
+import { db, purchaseOrdersTable, productsTable, suppliersTable, stockTransactionsTable } from "@workspace/db";
 import { eq, sql, and, count, sum } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -49,8 +49,17 @@ router.post("/purchase-orders", requireAuth, async (req, res) => {
   const [row] = await db.insert(purchaseOrdersTable).values({ companyId, supplierId: data.supplierId || null, supplierName: data.supplierName, billNumber, billDate, items: items as any, subtotal: String(subtotal), cgst: String(cgst), sgst: String(sgst), igst: String(igst), total: String(total), paymentStatus: data.paymentStatus || "pending", notes: data.notes }).returning();
 
   for (const item of items) {
-    if (item.productId && item.quantity) {
-      await db.execute(sql`UPDATE lb_products SET current_stock = current_stock + ${item.quantity} WHERE id = ${item.productId} AND company_id = ${companyId}`);
+    const pid = Number(item.productId);
+    const qty = Number(item.quantity);
+    if (item.productId && qty > 0) {
+      // Ownership check: skip items referencing another tenant's product
+      const [owned] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      if (!owned) continue;
+      await db.execute(sql`UPDATE lb_products SET current_stock = current_stock + ${qty} WHERE id = ${pid} AND company_id = ${companyId}`);
+      const [p] = await db.select({ currentStock: productsTable.currentStock }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      await db.insert(stockTransactionsTable).values({ companyId, productId: pid, variantId: item.variantId ? Number(item.variantId) : null, type: "purchase", quantityChange: qty, balanceAfter: p?.currentStock ?? 0, refType: "purchase_order", refId: row.id, userId: (req as any).auth?.userId }).catch(() => {/* non-blocking */});
     }
   }
 

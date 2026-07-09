@@ -1,6 +1,5 @@
-import { ExternalLink, FileText } from "lucide-react";
+import { FileText, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 export default function EWayBill() {
   return (
@@ -18,17 +17,22 @@ export default function EWayBill() {
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">E-Way Bill Generator</h2>
             <p className="text-muted-foreground text-sm">
-              Generate and manage E-Way Bills on the dedicated portal.
+              E-Way Bill generation runs locally. Visit the government portal at{" "}
+              <a
+                href="https://ewaybillgst.gov.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                ewaybillgst.gov.in
+              </a>{" "}
+              to register and generate bills using your GSTIN.
             </p>
           </div>
-          <Button
-            size="lg"
-            className="gap-2"
-            onClick={() => window.open("https://legacy-business-e-way-bill-generator.onrender.com", "_blank")}
-          >
-            <ExternalLink className="w-4 h-4" />
-            Click to make E Way Bill
-          </Button>
+          <div className="flex items-start gap-2 rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground max-w-xs">
+            <Info className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>No external cloud service is used. All your data stays on your local server.</span>
+          </div>
         </CardContent>
       </Card>
     </div>

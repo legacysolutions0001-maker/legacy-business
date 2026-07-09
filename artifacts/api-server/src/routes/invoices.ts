@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, invoicesTable, customersTable, paymentsTable, productsTable, productVariantsTable } from "@workspace/db";
+import { db, invoicesTable, customersTable, paymentsTable, productsTable, productVariantsTable, stockTransactionsTable } from "@workspace/db";
 import { eq, sql, and, count, sum } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -87,13 +87,24 @@ router.post("/invoices", requireAuth, async (req, res) => {
     await db.insert(paymentsTable).values({ companyId, invoiceId: row.id, entityType: "customer", entityId: data.customerId, entityName: data.customerName, amount: String(total), method: data.paymentMethod || "cash", paidAt: data.invoiceDate || new Date().toISOString().split("T")[0] });
   }
 
-  // Update stock — use GREATEST(0,...) to avoid negative stock
+  // Update stock — use GREATEST(0,...) to avoid negative stock; log each movement.
+  // Only process items whose productId actually belongs to this company to prevent
+  // cross-tenant data leakage in the ledger.
   for (const item of items) {
-    if (item.productId && item.quantity) {
-      await db.execute(sql`UPDATE lb_products SET current_stock = GREATEST(0, current_stock - ${Number(item.quantity)}) WHERE id = ${item.productId} AND company_id = ${companyId}`);
+    const pid = Number(item.productId);
+    const qty = Number(item.quantity);
+    if (item.productId && qty > 0) {
+      // Ownership check: skip items referencing another tenant's product
+      const [owned] = await db.select({ id: productsTable.id }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      if (!owned) continue;
+      await db.execute(sql`UPDATE lb_products SET current_stock = GREATEST(0, current_stock - ${qty}) WHERE id = ${pid} AND company_id = ${companyId}`);
+      const [p] = await db.select({ currentStock: productsTable.currentStock }).from(productsTable)
+        .where(and(eq(productsTable.id, pid), eq(productsTable.companyId, companyId))).limit(1);
+      await db.insert(stockTransactionsTable).values({ companyId, productId: pid, variantId: item.variantId ? Number(item.variantId) : null, type: "sale", quantityChange: -qty, balanceAfter: p?.currentStock ?? 0, refType: "invoice", refId: row.id, userId: req.auth!.userId }).catch(() => {/* non-blocking */});
     }
-    if (item.variantId && item.quantity) {
-      await db.execute(sql`UPDATE lb_product_variants SET current_stock = GREATEST(0, current_stock - ${Number(item.quantity)}) WHERE id = ${item.variantId} AND company_id = ${companyId}`);
+    if (item.variantId && qty > 0) {
+      await db.execute(sql`UPDATE lb_product_variants SET current_stock = GREATEST(0, current_stock - ${qty}) WHERE id = ${Number(item.variantId)} AND company_id = ${companyId}`);
     }
   }
 

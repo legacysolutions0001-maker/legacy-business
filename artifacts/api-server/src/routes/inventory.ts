@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, productsTable, productVariantsTable, stockBatchesTable } from "@workspace/db";
+import { db, productsTable, productVariantsTable, stockBatchesTable, stockTransactionsTable } from "@workspace/db";
 import { eq, ilike, sql, and, desc, count, or, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
@@ -137,6 +137,8 @@ router.post("/stock-batches", requireAuth, async (req, res) => {
   } else {
     await db.execute(sql`UPDATE lb_products SET current_stock = current_stock + ${Number(quantityReceived)}, selling_price = ${String(sellingPrice ?? 0)}, purchase_price = ${String(purchasePrice ?? 0)}, batch_number = ${batchNumber || null}, expiry_date = ${expiryDate || null} WHERE id = ${Number(productId)} AND company_id = ${companyId}`);
   }
+  const [p] = await db.select({ currentStock: productsTable.currentStock }).from(productsTable).where(eq(productsTable.id, Number(productId))).limit(1);
+  await db.insert(stockTransactionsTable).values({ companyId, productId: Number(productId), variantId: variantId ? Number(variantId) : null, batchId: batch.id, type: "purchase", quantityChange: Number(quantityReceived), balanceAfter: p?.currentStock ?? Number(quantityReceived), refType: "manual", notes: notes || null, userId: req.auth!.userId }).catch(() => {/* non-blocking */});
   res.status(201).json({ ...batch, purchasePrice: toNum(batch.purchasePrice), sellingPrice: toNum(batch.sellingPrice) });
 });
 

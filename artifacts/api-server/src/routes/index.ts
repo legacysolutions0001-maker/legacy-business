@@ -31,6 +31,11 @@ import returnsRouter from "./returns";
 import cashBankRouter from "./cash-bank";
 import backupRouter from "./backup";
 import auditLogRouter from "./audit-log";
+import categoriesRouter from "./categories";
+import unitsRouter from "./units";
+import branchesRouter from "./branches";
+import rolesRouter from "./roles";
+import stockTransactionsRouter from "./stock-transactions";
 
 const router: IRouter = Router();
 
@@ -66,5 +71,10 @@ router.use(returnsRouter);
 router.use(cashBankRouter);
 router.use(backupRouter);
 router.use(auditLogRouter);
+router.use(categoriesRouter);
+router.use(unitsRouter);
+router.use(branchesRouter);
+router.use(rolesRouter);
+router.use(stockTransactionsRouter);
 
 export default router;
