@@ -15,10 +15,13 @@ function findRepoRoot(startDir: string): string {
 
 loadEnv({ path: path.join(findRepoRoot(__dirname), ".env"), quiet: true });
 
-const dbUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+const isProduction = process.env.NODE_ENV === "production";
+const dbUrl = (isProduction && process.env.SUPABASE_DATABASE_URL)
+  ? process.env.SUPABASE_DATABASE_URL
+  : process.env.DATABASE_URL;
 
 if (!dbUrl) {
-  throw new Error("DATABASE_URL or SUPABASE_DATABASE_URL must be set. Ensure the database is provisioned.");
+  throw new Error("DATABASE_URL must be set. Ensure the database is provisioned.");
 }
 
 export default defineConfig({
@@ -27,6 +30,6 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     url: dbUrl,
-    ...(process.env.SUPABASE_DATABASE_URL ? { ssl: true } : {}),
+    ...((isProduction && process.env.SUPABASE_DATABASE_URL) ? { ssl: true } : {}),
   },
 });
