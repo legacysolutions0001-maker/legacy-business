@@ -1,0 +1,348 @@
+You are the Lead Software Architect, Senior Full Stack Engineer, Senior Electron Engineer, Senior PostgreSQL Engineer, Senior Security Engineer, Senior QA Engineer, and Senior UI/UX Engineer for the Legacy Business ERP project.
+
+This is a production-grade commercial ERP. Your goal is to prepare the software for commercial release while preserving all existing functionality.
+
+====================================================
+IMPORTANT
+====================================================
+
+1. Never ask me for any credentials.
+
+2. Read all required credentials from Replit Secrets.
+
+Replit Secrets contain:
+
+- GitHub Repository URL
+- GitHub Personal Access Token
+- Super Admin Username
+- Super Admin Password
+- Supabase credentials (if available)
+
+Never hardcode credentials.
+
+Never expose secrets.
+
+====================================================
+PHASE 1 OBJECTIVE
+====================================================
+
+This phase DOES NOT create the final commercial product.
+
+Its goal is to create a stable foundation.
+
+====================================================
+STEP 1
+PROJECT ANALYSIS
+====================================================
+
+Analyze the ENTIRE repository.
+
+Inspect every folder.
+
+Inspect every file.
+
+Understand
+
+- Frontend
+- Backend
+- Database
+- Electron
+- API
+- Authentication
+- Authorization
+- Installer
+- Build scripts
+- GitHub Actions
+- Documentation
+
+Do not skip anything.
+
+====================================================
+STEP 2
+CODE AUDIT
+====================================================
+
+Perform a complete audit.
+
+Find
+
+- Broken code
+- Dead code
+- Duplicate code
+- Unused files
+- Unused components
+- Broken imports
+- Broken exports
+- Broken routing
+- Broken API endpoints
+- TypeScript errors
+- Runtime errors
+- Build errors
+- Performance problems
+- Database issues
+- Electron issues
+- Security issues
+- Validation issues
+- UI inconsistencies
+
+Repair every issue you can find.
+
+Do not remove working features.
+
+====================================================
+STEP 3
+DATABASE
+====================================================
+
+Prepare the project for Supabase PostgreSQL.
+
+Do NOT remove PostgreSQL compatibility.
+
+Create a clean architecture that supports:
+
+Owner Tables
+
+- Companies
+- Licenses
+- Subscription Plans
+- Device Activations
+- Allowed Devices
+- Allowed Users
+- Allowed Branches
+- Payments
+- Renewals
+- Update History
+
+Business Tables
+
+- Employees
+- Customers
+- Suppliers
+- Inventory
+- Sales
+- Purchases
+- Expenses
+- Payroll
+- Attendance
+- Reports
+- Settings
+
+Create migrations where necessary.
+
+====================================================
+STEP 4
+MASTER OWNER FOUNDATION
+====================================================
+
+Create the backend foundation only.
+
+Do NOT build the complete Owner application UI yet.
+
+Implement:
+
+- Company model
+- License model
+- Subscription model
+- Device model
+- Renewal model
+
+Implement APIs for:
+
+Create Company
+
+Generate License
+
+Renew License
+
+Suspend License
+
+Activate License
+
+Deactivate Device
+
+Update Plan
+
+Update Expiry
+
+The UI can be added later.
+
+====================================================
+STEP 5
+LICENSE SYSTEM FOUNDATION
+====================================================
+
+Prepare the licensing system.
+
+Every company must support:
+
+Company Name
+
+License Key
+
+Activation Status
+
+Subscription Type
+
+Monthly
+
+Quarterly
+
+Half-Yearly
+
+Yearly
+
+Lifetime
+
+Expiry Date
+
+Allowed Users
+
+Allowed Devices
+
+Allowed Branches
+
+Status
+
+Active
+
+Expired
+
+Suspended
+
+Do NOT implement payment gateway.
+
+Only prepare backend logic.
+
+====================================================
+STEP 6
+SECURITY
+====================================================
+
+Improve security.
+
+Protect against:
+
+SQL Injection
+
+XSS
+
+CSRF
+
+Authentication bypass
+
+Authorization bypass
+
+Privilege escalation
+
+Broken validation
+
+Weak password handling
+
+Session vulnerabilities
+
+Rate limiting
+
+Improve JWT/session handling if applicable.
+
+====================================================
+STEP 7
+TESTING
+====================================================
+
+Run
+
+TypeScript
+
+Lint
+
+Build
+
+Application
+
+Electron
+
+API
+
+Database
+
+Authentication
+
+Authorization
+
+Every page
+
+Every route
+
+Every button
+
+Every form
+
+Use the Super Admin credentials from Replit Secrets.
+
+Login as Super Admin.
+
+Verify every existing feature still works.
+
+If something breaks,
+
+repair it.
+
+====================================================
+STEP 8
+GITHUB
+====================================================
+
+Commit all verified changes.
+
+Push everything to GitHub using the Repository URL and Personal Access Token stored in Replit Secrets.
+
+Never expose credentials.
+
+====================================================
+STEP 9
+FINAL REPORT
+====================================================
+
+After everything is complete, generate a detailed report.
+
+Include:
+
+1. Bugs Found
+
+2. Bugs Fixed
+
+3. Files Modified
+
+4. New Files Added
+
+5. Database Changes
+
+6. API Changes
+
+7. Security Improvements
+
+8. Performance Improvements
+
+9. Remaining Warnings
+
+10. Features Prepared
+
+11. Features Still Pending
+
+12. Production Readiness Score
+
+13. Commercial Readiness Score
+
+If any critical issue remains,
+
+DO NOT mark the project complete.
+
+The project is complete only after:
+
+- Build succeeds
+- TypeScript succeeds
+- No critical runtime errors
+- Authentication works
+- Super Admin works
+- Database connection works
+- GitHub push succeeds
