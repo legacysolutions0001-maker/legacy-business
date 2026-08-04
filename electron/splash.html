@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Legacy Business ERP</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-app-region: drag;
+    }
+    .logo-container {
+      width: 96px;
+      height: 96px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 0 60px rgba(99, 102, 241, 0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .logo-text {
+      font-size: 36px;
+      font-weight: 900;
+      color: white;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #f8fafc;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 40px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    .status {
+      font-size: 12px;
+      color: #64748b;
+      animation: fadeInOut 2s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 60px rgba(99,102,241,0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 80px rgba(99,102,241,0.6); }
+    }
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    .version {
+      position: absolute;
+      bottom: 16px;
+      right: 20px;
+      font-size: 11px;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <span class="logo-text">LB</span>
+  </div>
+  <h1>Legacy Business ERP</h1>
+  <div class="subtitle">Business Management Solution</div>
+  <div class="spinner"></div>
+  <div class="status" id="status">Starting services...</div>
+  <div class="version">v1.0.0</div>
+  <script>
+    const messages = [
+      'Starting services...',
+      'Connecting to database...',
+      'Loading application...',
+      'Almost ready...',
+    ];
+    let i = 0;
+    const el = document.getElementById('status');
+    setInterval(() => {
+      el.textContent = messages[i % messages.length];
+      i++;
+    }, 1800);
+  </script>
+</body>
+</html>

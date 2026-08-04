@@ -1,0 +1,93 @@
+{
+  "name": "legacy-business-erp",
+  "version": "1.0.0",
+  "description": "Legacy Business ERP - Complete Business Management Solution",
+  "main": "main.js",
+  "author": "Legacy Business Team",
+  "license": "SEE LICENSE IN installer/LICENSE.txt",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "npm run build:all && electron-builder",
+    "build:win": "npm run build:all && electron-builder --win",
+    "build:win:portable": "npm run build:all && electron-builder --win portable",
+    "build:linux": "npm run build:all && electron-builder --linux",
+    "build:all": "cd .. && pnpm run build:artifacts",
+    "pack": "electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron": "^31.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.legacybusiness.erp",
+    "productName": "Legacy Business ERP",
+    "copyright": "Copyright © 2025 Legacy Business Team",
+    "directories": {
+      "output": "../dist-electron"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "icons/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../artifacts/api-server/dist",
+        "to": "api-server/dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../artifacts/legacy-business/dist/public",
+        "to": "frontend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../lib/db/migrations",
+        "to": "migrations",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "icons/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
+      "installerHeaderIcon": "icons/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Legacy Business ERP",
+      "license": "installer/LICENSE.txt",
+      "artifactName": "Legacy Business Setup.exe"
+    },
+    "portable": {
+      "artifactName": "Legacy Business Portable.exe"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "icons/icon.png",
+      "category": "Office"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icons/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "publish": null
+  }
+}

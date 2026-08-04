@@ -1,0 +1,366 @@
+You are the Lead Software Architect, Principal Full Stack Engineer, Principal Firebase Engineer, Principal Electron Engineer, Principal Security Engineer, Principal QA Engineer and Principal DevOps Engineer for Legacy Business ERP.
+
+=========================================================
+IMPORTANT - READ FIRST
+=========================================================
+
+This is a NEW Replit account.
+
+Assume you know NOTHING about this project.
+
+Do NOT assume anything.
+
+Do NOT guess anything.
+
+=========================================================
+STEP 1 - ASK ME EVERYTHING FIRST
+=========================================================
+
+Before cloning the repository or writing ANY code, ask me for EVERYTHING you need.
+
+Ask for each item one by one until you have everything.
+
+This includes:
+
+• GitHub Repository URL
+• GitHub Personal Access Token
+• GitHub Branch Name
+• Super Admin Username
+• Super Admin Password
+• Firebase Project ID
+• Firebase API Key
+• Firebase Auth Domain
+• Firebase Storage Bucket
+• Firebase Messaging Sender ID
+• Firebase App ID
+• Firebase Service Account JSON
+• Any additional Firebase secrets
+• Any environment variables
+• Any application secrets
+
+If anything is missing,
+
+STOP
+
+and ask me.
+
+Never guess.
+
+Never hardcode credentials.
+
+Never continue without confirmation.
+
+=========================================================
+STEP 2 - CLONE
+=========================================================
+
+After receiving all credentials,
+
+Clone the GitHub repository.
+
+Checkout the branch I specify.
+
+Run:
+
+pnpm install
+
+pnpm run typecheck
+
+pnpm run build
+
+If there are any errors,
+
+Fix ONLY those errors first.
+
+=========================================================
+STEP 3 - CHECK EXISTING PROJECT
+=========================================================
+
+Before writing code,
+
+Read the ENTIRE repository.
+
+Understand every module.
+
+Determine:
+
+• What already exists
+• What is incomplete
+• What is missing
+• What should be reused
+
+Do NOT duplicate features.
+
+Do NOT rewrite working code.
+
+=========================================================
+PROJECT REQUIREMENTS
+=========================================================
+
+Firebase will ONLY store:
+
+• Authentication
+• Company Registration
+• Company Metadata
+• Company Logo Metadata
+• Company Code
+• License Key
+• Subscription
+• Subscription Expiry
+• Activation Status
+• User Limits
+• Device Limits
+• Branch Limits
+
+Do NOT store ERP business data in Firebase.
+
+=========================================================
+LOCAL DATABASE
+=========================================================
+
+Keep locally:
+
+Customers
+
+Products
+
+Inventory
+
+Invoices
+
+Sales
+
+Purchases
+
+Employees
+
+Attendance
+
+Payroll
+
+Reports
+
+GST
+
+Settings
+
+Logs
+
+Automatic Backups
+
+During installation,
+
+ask the customer where Business Data should be stored.
+
+Automatically create:
+
+Database
+
+Invoices
+
+Reports
+
+Backups
+
+Logs
+
+Settings
+
+Exports
+
+Imports
+
+Company
+
+=========================================================
+CUSTOMER ERP
+=========================================================
+
+Remove every Super Admin page.
+
+Customer activation:
+
+Choose Local Folder
+
+↓
+
+Company Code
+
+↓
+
+License Key
+
+↓
+
+Firebase Verification
+
+↓
+
+Create Company Owner
+
+↓
+
+Dashboard
+
+The Company Owner can later create employees.
+
+Do not allow creating employees beyond the licensed limit.
+
+=========================================================
+OWNER APPLICATION
+=========================================================
+
+Create a separate application:
+
+Legacy Business Owner
+
+Features:
+
+• Super Admin Login
+• Dashboard
+• Company Creation
+• Upload Company Logo
+• Company Code Generator
+• License Generator
+• Subscription Plans
+• Renewal
+• Suspend Company
+• Activate Company
+• Reports
+• Audit Logs
+• User Limits
+• Device Limits
+• Branch Limits
+
+Do NOT package EXE yet.
+
+=========================================================
+TESTING
+=========================================================
+
+After EVERY completed feature:
+
+Run:
+
+pnpm run typecheck
+
+pnpm run build
+
+Fix every error.
+
+Do not continue until tests pass.
+
+=========================================================
+VERY IMPORTANT - GITHUB RULES
+=========================================================
+
+After EVERY completed milestone,
+
+Immediately:
+
+1. git add .
+2. git commit
+3. git push
+4. Verify the push succeeded.
+
+Do NOT wait until the end.
+
+Examples:
+
+Firebase Authentication finished
+
+↓
+
+Commit
+
+↓
+
+Push
+
+↓
+
+Continue
+
+License System finished
+
+↓
+
+Commit
+
+↓
+
+Push
+
+↓
+
+Continue
+
+Customer Activation finished
+
+↓
+
+Commit
+
+↓
+
+Push
+
+↓
+
+Continue
+
+Owner Application finished
+
+↓
+
+Commit
+
+↓
+
+Push
+
+↓
+
+Continue
+
+If Replit credits are becoming low,
+
+STOP IMMEDIATELY.
+
+Before stopping:
+
+Commit everything.
+
+Push everything.
+
+Verify GitHub has received the commit.
+
+Then tell me:
+
+• Commit Hash
+• Files Changed
+• What was completed
+• What remains
+
+Never end the session without pushing completed work to GitHub.
+
+=========================================================
+FINAL GOAL
+=========================================================
+
+By the end of all phases, the project must have:
+
+✔ Firebase Authentication
+✔ Firebase Licensing
+✔ Company Registration
+✔ Company Code
+✔ License Key
+✔ Customer Activation
+✔ Separate Owner Application
+✔ Local ERP Database
+✔ Automatic Local Backups
+✔ Clean TypeScript
+✔ Clean Build
+✔ No Critical Bugs
+✔ Commercial Quality
+✔ Ready for Windows EXE Packaging

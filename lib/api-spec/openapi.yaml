@@ -10,6 +10,20 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: leads
+    description: CRM leads
+  - name: deals
+    description: CRM deals
+  - name: expenses
+    description: Expense tracking
+  - name: leaves
+    description: Employee leave requests
+  - name: projects
+    description: Projects
+  - name: tasks
+    description: Project tasks
+  - name: appointments
+    description: Appointments
 paths:
   /healthz:
     get:
@@ -24,6 +38,588 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /leads/pipeline:
+    get:
+      operationId: leadsPipeline
+      tags: [leads]
+      summary: Lead pipeline summary
+      responses:
+        "200":
+          description: Pipeline stage summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PipelineStageSummary"
+
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List leads
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Create a lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /leads/{id}:
+    get:
+      operationId: getLead
+      tags: [leads]
+      summary: Get a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+    patch:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+    delete:
+      operationId: deleteLead
+      tags: [leads]
+      summary: Delete a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /crm/pipeline:
+    get:
+      operationId: dealsPipeline
+      tags: [deals]
+      summary: Deal pipeline summary
+      responses:
+        "200":
+          description: Pipeline stage summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PipelineStageSummary"
+
+  /deals:
+    get:
+      operationId: listDeals
+      tags: [deals]
+      summary: List deals
+      parameters:
+        - name: stage
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deal"
+    post:
+      operationId: createDeal
+      tags: [deals]
+      summary: Create a deal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+
+  /deals/{id}:
+    patch:
+      operationId: updateDeal
+      tags: [deals]
+      summary: Update a deal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DealUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deal"
+    delete:
+      operationId: deleteDeal
+      tags: [deals]
+      summary: Delete a deal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /expenses/by-category:
+    get:
+      operationId: expensesByCategory
+      tags: [expenses]
+      summary: Expenses grouped by category
+      responses:
+        "200":
+          description: Category totals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseCategorySummary"
+
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List expenses
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Expense"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Create an expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+
+  /expenses/{id}:
+    patch:
+      operationId: updateExpense
+      tags: [expenses]
+      summary: Update an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpenseUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Expense"
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /leaves:
+    get:
+      operationId: listLeaves
+      tags: [leaves]
+      summary: List leave requests
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: employeeId
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Leave requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Leave"
+    post:
+      operationId: createLeave
+      tags: [leaves]
+      summary: Create a leave request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leave"
+
+  /leaves/{id}:
+    patch:
+      operationId: updateLeave
+      tags: [leaves]
+      summary: Update a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Leave"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List projects
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - name: projectId
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: date
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}:
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Delete an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +630,287 @@ components:
       required:
         - status
 
+    PipelineStageSummary:
+      type: object
+      properties:
+        stage: { type: string }
+        count: { type: integer }
+        totalValue: { type: number }
+      required: [stage, count, totalValue]
+
+    ExpenseCategorySummary:
+      type: object
+      properties:
+        category: { type: string }
+        total: { type: number }
+        count: { type: integer }
+      required: [category, total, count]
+
+    Lead:
+      type: object
+      properties:
+        id: { type: integer }
+        companyId: { type: integer }
+        name: { type: string }
+        email: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        company: { type: ["string", "null"] }
+        status: { type: string }
+        source: { type: string }
+        value: { type: ["number", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, companyId, name, status, source, createdAt, updatedAt]
+    LeadInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string }
+        phone: { type: string }
+        company: { type: string }
+        status: { type: string }
+        source: { type: string }
+        value: { type: number }
+        notes: { type: string }
+      required: [name]
+    LeadUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string }
+        phone: { type: string }
+        company: { type: string }
+        status: { type: string }
+        source: { type: string }
+        value: { type: number }
+        notes: { type: string }
+
+    Deal:
+      type: object
+      properties:
+        id: { type: integer }
+        companyId: { type: integer }
+        title: { type: string }
+        stage: { type: string }
+        value: { type: number }
+        probability: { type: ["integer", "null"] }
+        customerId: { type: ["integer", "null"] }
+        customerName: { type: ["string", "null"] }
+        expectedCloseDate: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, companyId, title, stage, value, createdAt, updatedAt]
+    DealInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        stage: { type: string }
+        value: { type: number }
+        probability: { type: integer }
+        customerId: { type: integer }
+        expectedCloseDate: { type: string }
+        notes: { type: string }
+      required: [title, value]
+    DealUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        stage: { type: string }
+        value: { type: number }
+        probability: { type: integer }
+        customerId: { type: integer }
+        expectedCloseDate: { type: string }
+        notes: { type: string }
+
+    Expense:
+      type: object
+      properties:
+        id: { type: integer }
+        companyId: { type: integer }
+        title: { type: string }
+        amount: { type: number }
+        category: { type: string }
+        vendor: { type: ["string", "null"] }
+        date: { type: string }
+        notes: { type: ["string", "null"] }
+        receiptUrl: { type: ["string", "null"] }
+        createdAt: { type: string }
+      required: [id, companyId, title, amount, category, date, createdAt]
+    ExpenseInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        amount: { type: number }
+        category: { type: string, minLength: 1 }
+        vendor: { type: string }
+        date: { type: string }
+        notes: { type: string }
+        receiptUrl: { type: string }
+      required: [title, amount, category, date]
+    ExpenseUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        amount: { type: number }
+        category: { type: string, minLength: 1 }
+        vendor: { type: string }
+        date: { type: string }
+        notes: { type: string }
+        receiptUrl: { type: string }
+
+    Leave:
+      type: object
+      properties:
+        id: { type: integer }
+        employeeId: { type: integer }
+        employeeName: { type: ["string", "null"] }
+        type: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        status: { type: string }
+        reason: { type: ["string", "null"] }
+        createdAt: { type: string }
+      required: [id, employeeId, type, startDate, endDate, status, createdAt]
+    LeaveInput:
+      type: object
+      properties:
+        employeeId: { type: integer }
+        type: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        status: { type: string }
+        reason: { type: string }
+      required: [employeeId, startDate, endDate]
+    LeaveUpdate:
+      type: object
+      properties:
+        employeeId: { type: integer }
+        type: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        status: { type: string }
+        reason: { type: string }
+
+    Project:
+      type: object
+      properties:
+        id: { type: integer }
+        companyId: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string }
+        priority: { type: string }
+        startDate: { type: ["string", "null"] }
+        endDate: { type: ["string", "null"] }
+        budget: { type: ["number", "null"] }
+        progress: { type: ["integer", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, companyId, name, status, priority, createdAt, updatedAt]
+    ProjectInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        budget: { type: number }
+        progress: { type: integer }
+      required: [name]
+    ProjectUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        budget: { type: number }
+        progress: { type: integer }
+
+    Task:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string }
+        priority: { type: string }
+        projectId: { type: integer }
+        projectName: { type: ["string", "null"] }
+        assigneeId: { type: ["integer", "null"] }
+        assigneeName: { type: ["string", "null"] }
+        dueDate: { type: ["string", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, title, status, priority, projectId, createdAt, updatedAt]
+    TaskInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        projectId: { type: integer }
+        assigneeId: { type: integer }
+        dueDate: { type: string }
+      required: [title, projectId]
+    TaskUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        projectId: { type: integer }
+        assigneeId: { type: integer }
+        dueDate: { type: string }
+
+    Appointment:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        customerName: { type: string }
+        customerEmail: { type: ["string", "null"] }
+        customerPhone: { type: ["string", "null"] }
+        date: { type: string }
+        time: { type: string }
+        duration: { type: ["integer", "null"] }
+        status: { type: string }
+        notes: { type: ["string", "null"] }
+        assignedTo: { type: ["string", "null"] }
+        createdAt: { type: string }
+      required: [id, title, customerName, date, time, status, createdAt]
+    AppointmentInput:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        customerName: { type: string, minLength: 1 }
+        customerEmail: { type: string }
+        customerPhone: { type: string }
+        date: { type: string }
+        time: { type: string }
+        duration: { type: integer }
+        status: { type: string }
+        notes: { type: string }
+        assignedTo: { type: string }
+      required: [title, customerName, date, time]
+    AppointmentUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        customerName: { type: string, minLength: 1 }
+        customerEmail: { type: string }
+        customerPhone: { type: string }
+        date: { type: string }
+        time: { type: string }
+        duration: { type: integer }
+        status: { type: string }
+        notes: { type: string }
+        assignedTo: { type: string }
