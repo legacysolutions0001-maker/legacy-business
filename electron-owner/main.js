@@ -16,6 +16,36 @@ const ICON_PATH  = path.join(__dirname, 'icons', 'icon.ico');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'legacy-owner-settings.json');
 const BACKUP_DIR_DEFAULT = path.join(app.getPath('documents'), 'LegacyOwnerBackups');
 
+// ─── Logging ─────────────────────────────────────────────────────────────────
+const LOG_DIR = path.join(app.getPath('userData'), 'logs');
+const ELECTRON_LOG = path.join(LOG_DIR, 'electron-owner.log');
+const BACKEND_LOG  = path.join(LOG_DIR, 'backend-owner.log');
+
+function ensureLogDir() {
+  try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch {}
+}
+
+function logElectron(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  process.stdout.write(line);
+  try { fs.appendFileSync(ELECTRON_LOG, line); } catch {}
+}
+
+function logBackend(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try { fs.appendFileSync(BACKEND_LOG, line); } catch {}
+}
+
+function readLastLines(filePath, maxLines = 40) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.trim().split('\n');
+    return lines.slice(-maxLines).join('\n');
+  } catch {
+    return '(no log output captured)';
+  }
+}
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 function loadSettings() {
   try {
@@ -35,7 +65,7 @@ function saveSettings(settings) {
     fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
   } catch (e) {
-    console.error('Failed to save settings:', e);
+    logElectron(`Failed to save settings: ${e.message}`);
   }
 }
 
@@ -163,6 +193,8 @@ function createTray() {
       },
     },
     { type: 'separator' },
+    { label: 'Open Log Folder', click: () => shell.openPath(LOG_DIR) },
+    { type: 'separator' },
     { label: 'Quit', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
   tray.setToolTip('Legacy Business Owner');
@@ -185,21 +217,49 @@ async function startBackend() {
   const saPath = path.join(RESOURCES, 'firebase-service-account.json');
   let firebaseSaJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '';
   if (!firebaseSaJson && fs.existsSync(saPath)) {
-    try { firebaseSaJson = fs.readFileSync(saPath, 'utf8').trim(); } catch {}
+    try { firebaseSaJson = fs.readFileSync(saPath, 'utf8').trim(); } catch (e) {
+      logElectron(`Warning: could not read firebase-service-account.json: ${e.message}`);
+    }
   }
+
+  // Default DATABASE_URL to local PostgreSQL if not configured.
+  // Users can override via the Settings screen or by setting the env variable.
+  const databaseUrl =
+    settings.databaseUrl ||
+    process.env.DATABASE_URL ||
+    'postgresql://postgres:postgres@localhost:5432/legacy_erp';
 
   const env = {
     ...process.env,
     PORT: String(apiPort),
     NODE_ENV: 'production',
-    DATABASE_URL: settings.databaseUrl || process.env.DATABASE_URL || '',
+    DATABASE_URL: databaseUrl,
     SESSION_SECRET: settings.sessionSecret || process.env.SESSION_SECRET || 'legacy_owner_secret_2025',
     FIREBASE_SERVICE_ACCOUNT_JSON: firebaseSaJson,
-    FIREBASE_PROJECT_ID: 'legacy-business-erp',
-    FIREBASE_STORAGE_BUCKET: 'legacy-business-erp.firebasestorage.app',
+    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'legacy-business-erp',
+    FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || 'legacy-business-erp.firebasestorage.app',
+    SUPER_ADMIN_USERNAME: process.env.SUPER_ADMIN_USERNAME || 'bhullar01',
+    SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD || settings.superAdminPassword || 'Bhullar_01',
     BACKUP_DIR: settings.backupFolder || BACKUP_DIR_DEFAULT,
     MIGRATIONS_DIR: MIGRATIONS,
   };
+
+  // Rotate backend log: keep previous run as .prev
+  try {
+    if (fs.existsSync(BACKEND_LOG)) {
+      fs.renameSync(BACKEND_LOG, BACKEND_LOG + '.prev');
+    }
+  } catch {}
+
+  logElectron(`Starting API server — port ${apiPort}, API_DIST=${API_DIST}`);
+  logElectron(`DATABASE_URL prefix: ${databaseUrl.replace(/:\/\/.*@/, '://<credentials>@')}`);
+  logElectron(`Firebase SA JSON present: ${!!firebaseSaJson}`);
+
+  if (!fs.existsSync(API_DIST)) {
+    const err = new Error(`API server bundle not found at: ${API_DIST}`);
+    logElectron(`FATAL: ${err.message}`);
+    throw err;
+  }
 
   const nodeExe = process.execPath;
   apiProcess = spawn(nodeExe, ['--enable-source-maps', API_DIST], {
@@ -208,14 +268,39 @@ async function startBackend() {
     windowsHide: true,
   });
 
-  apiProcess.stdout?.on('data', (d) => console.log('[API]', d.toString().trim()));
-  apiProcess.stderr?.on('data', (d) => console.error('[API ERR]', d.toString().trim()));
-  apiProcess.on('exit', (code) => {
-    console.log(`API process exited with code ${code}`);
+  apiProcess.stdout?.on('data', (d) => {
+    const text = d.toString().trim();
+    logBackend(`[stdout] ${text}`);
   });
 
-  await waitForPort(apiPort, 30000);
-  console.log(`✓ API Server running on port ${apiPort}`);
+  apiProcess.stderr?.on('data', (d) => {
+    const text = d.toString().trim();
+    logBackend(`[stderr] ${text}`);
+    logElectron(`[API ERR] ${text}`);
+  });
+
+  // Track early exit — if the process dies before port is ready, surface the real error
+  let exitCode = null;
+  apiProcess.on('exit', (code, signal) => {
+    exitCode = code;
+    logElectron(`API process exited — code=${code}, signal=${signal}`);
+    logBackend(`[exit] code=${code} signal=${signal}`);
+  });
+
+  try {
+    await waitForPort(apiPort, 30000);
+    logElectron(`✓ API Server ready on port ${apiPort}`);
+  } catch (waitErr) {
+    // Port never opened — the process either crashed or hung.
+    // Give it a moment for stderr to flush, then surface the real error.
+    await new Promise((r) => setTimeout(r, 500));
+    const backendOutput = readLastLines(BACKEND_LOG, 50);
+    const detail = exitCode !== null
+      ? `The API server process exited with code ${exitCode} before opening port ${apiPort}.\n\nLast output from backend-owner.log:\n${backendOutput}\n\nFull log: ${BACKEND_LOG}`
+      : `The API server did not open port ${apiPort} within 30 seconds.\n\nLast output from backend-owner.log:\n${backendOutput}\n\nFull log: ${BACKEND_LOG}`;
+    logElectron(`STARTUP FAILURE: ${detail}`);
+    throw new Error(detail);
+  }
 }
 
 // ─── Frontend (serve static) ──────────────────────────────────────────────────
@@ -246,7 +331,7 @@ async function startFrontend() {
       }
     });
     frontendServer.listen(frontendPort, '127.0.0.1', () => {
-      console.log(`✓ Frontend served on port ${frontendPort}`);
+      logElectron(`✓ Frontend served on port ${frontendPort}`);
       resolve();
     });
     frontendServer.on('error', reject);
@@ -300,14 +385,29 @@ ipcMain.handle('open-backup-folder', () => {
   shell.openPath(dir);
 });
 
+ipcMain.handle('open-log-folder', () => {
+  shell.openPath(LOG_DIR);
+});
+
 ipcMain.handle('show-notification', (_, { title, body }) => {
   new Notification({ title, body }).show();
 });
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
+  ensureLogDir();
+  logElectron('=== Legacy Business Owner starting ===');
+  logElectron(`Version: 1.0.0 | Electron: ${process.versions.electron} | Node: ${process.versions.node}`);
+  logElectron(`Resources: ${RESOURCES}`);
+  logElectron(`userData: ${app.getPath('userData')}`);
+  logElectron(`Logs: ${LOG_DIR}`);
+
   const gotLock = app.requestSingleInstanceLock();
-  if (!gotLock) { app.quit(); return; }
+  if (!gotLock) {
+    logElectron('Another instance already running — quitting.');
+    app.quit();
+    return;
+  }
 
   app.on('second-instance', () => { showApp(); });
 
@@ -316,13 +416,17 @@ app.whenReady().then(async () => {
   createSplash();
 
   try {
+    logElectron('Starting backend and frontend servers...');
     await Promise.all([startBackend(), startFrontend()]);
+    logElectron('Both servers ready — creating main window.');
     createTray();
     createMainWindow();
   } catch (err) {
+    logElectron(`FATAL startup error: ${err.message}`);
+    const shortMsg = err.message.length > 2000 ? err.message.substring(0, 2000) + '\n...(truncated, see log)' : err.message;
     dialog.showErrorBox(
-      'Startup Error',
-      `Failed to start Legacy Business Owner:\n\n${err.message}\n\nPlease check your database connection and try again.`
+      'Legacy Business Owner — Startup Error',
+      `${shortMsg}\n\nLog files are at:\n${LOG_DIR}`
     );
     app.quit();
   }
@@ -335,6 +439,7 @@ app.on('window-all-closed', () => {
 app.on('activate', () => { if (!mainWindow) createMainWindow(); });
 
 app.on('before-quit', () => {
+  logElectron('App quitting.');
   app.isQuitting = true;
   if (apiProcess) { apiProcess.kill(); apiProcess = null; }
   if (frontendServer) { frontendServer.close(); frontendServer = null; }

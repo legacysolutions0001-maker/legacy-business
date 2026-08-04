@@ -58,10 +58,11 @@ async function buildAll() {
       "@aws-sdk/*",
       "@azure/*",
       "@opentelemetry/*",
-      "@google-cloud/*",
-      "@google/*",
-      "googleapis",
-      "firebase-admin",
+      // NOTE: firebase-admin and @google-cloud/* are intentionally BUNDLED
+      // (not external) so the packaged Electron EXE can run the API server
+      // without needing a node_modules directory alongside the bundle.
+      // They are pure-JS packages with no native bindings.
+
       "@parcel/watcher",
       "@sentry/profiling-node",
       "@tree-sitter/*",
