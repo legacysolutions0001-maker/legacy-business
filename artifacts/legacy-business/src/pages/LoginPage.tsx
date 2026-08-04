@@ -142,9 +142,19 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/30">
-            <Building2 className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <img
+            src="/logo-erp.jpg"
+            alt="Legacy Business ERP"
+            className="h-16 w-auto object-contain mb-4 rounded-xl shadow-lg"
+            onError={e => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = "none";
+              const fallback = document.createElement("div");
+              fallback.className = "w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-primary/30";
+              fallback.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-primary-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8"/><path d="M18 9h2a2 2 0 0 1 2 2v11"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>`;
+              img.parentElement?.insertBefore(fallback, img.nextSibling);
+            }}
+          />
           <h1 className="text-3xl font-bold text-white tracking-tight">Legacy Business</h1>
           <p className="text-slate-400 mt-1 text-sm">ERP Management System</p>
         </div>

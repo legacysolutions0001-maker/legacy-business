@@ -1,3 +1,4 @@
+export * from "./activated-devices";
 export * from "./activity";
 export * from "./appointments";
 export * from "./attendance";

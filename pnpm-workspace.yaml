@@ -90,6 +90,10 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Force a single instance of @opentelemetry/api to prevent drizzle-orm from
+  # being resolved twice with different peer-dep configurations (which causes
+  # TS2345 private-field type incompatibilities between the two instances).
+  "@opentelemetry/api": "^1.9.1"
 
 allowBuilds:
   - esbuild

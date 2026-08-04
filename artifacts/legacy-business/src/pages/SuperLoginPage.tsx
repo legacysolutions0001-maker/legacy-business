@@ -135,16 +135,18 @@ export default function SuperLoginPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-4">
-            <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/60">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
-              <span className="text-[9px] font-black text-black">SA</span>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Super Admin</h1>
-          <p className="text-slate-400 mt-1 text-sm">Legacy Business ERP — Restricted Area</p>
+          <img
+            src="/logo-owner.png"
+            alt="Legacy Business Owner"
+            className="h-16 w-auto object-contain mb-4 rounded-xl shadow-lg shadow-red-900/30"
+            onError={e => {
+              const img = e.target as HTMLImageElement;
+              img.style.display = "none";
+              img.insertAdjacentHTML("afterend", `<div class="relative mb-4"><div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/60"><svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div><div class="absolute -bottom-1 -right-1 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center"><span class="text-[9px] font-black text-black">SA</span></div></div>`);
+            }}
+          />
+          <h1 className="text-3xl font-bold text-white tracking-tight">Legacy Business Owner</h1>
+          <p className="text-slate-400 mt-1 text-sm">Super Administrator — Restricted Area</p>
         </div>
 
         {/* Warning badge */}

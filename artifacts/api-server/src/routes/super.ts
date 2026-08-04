@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable, companiesTable, subscriptionsTable, notificationsTable, invoicesTable, productsTable, customersTable, suppliersTable, productVariantsTable } from "@workspace/db";
 import { eq, sql, count, ilike, or, desc } from "drizzle-orm";
 import { requireSuperAdmin } from "../middlewares/auth";
+import { syncCompanyToFirestore, generateLicenseKey, deleteCompanyFromFirestore } from "../lib/firebase-admin";
 
 const router = Router();
 
@@ -49,6 +50,13 @@ router.post("/super/companies", requireSuperAdmin, async (req, res) => {
   const existing = await db.select({ id: companiesTable.id }).from(companiesTable).where(eq(companiesTable.code, upper)).limit(1);
   if (existing.length > 0) { res.status(400).json({ error: "Company code already exists" }); return; }
 
+  // Generate a license key automatically
+  const licenseKey = generateLicenseKey();
+  const maxUsers = Number(req.body.maxUsers) || 5;
+  const maxDevices = Number(req.body.maxDevices) || 1;
+  const maxBranches = Number(req.body.maxBranches) || 1;
+  const subscriptionEnd = req.body.subscriptionEnd || undefined;
+
   const [company] = await db.insert(companiesTable).values({
     name, code: upper,
     ownerName: ownerName || undefined,
@@ -60,7 +68,13 @@ router.post("/super/companies", requireSuperAdmin, async (req, res) => {
     state: state || undefined,
     logoUrl: logoUrl || logo || undefined,
     plan: plan || "starter",
-    subscriptionStatus: "active"
+    subscriptionStatus: "active",
+    subscriptionEnd: subscriptionEnd,
+    licenseKey,
+    maxUsers,
+    maxDevices,
+    maxBranches,
+    activationStatus: "active",
   }).returning();
 
   const hash = await bcrypt.hash(ownerPassword, 10);
@@ -87,7 +101,32 @@ router.post("/super/companies", requireSuperAdmin, async (req, res) => {
     });
   }
 
-  res.json(company);
+  // Sync to Firebase Firestore (non-fatal if it fails)
+  try {
+    const firebaseId = await syncCompanyToFirestore({
+      companyCode: upper,
+      companyName: name,
+      licenseKey,
+      maxUsers,
+      maxDevices,
+      maxBranches,
+      subscriptionStatus: "active",
+      subscriptionExpiry: subscriptionEnd ?? null,
+      activationStatus: "active",
+      plan: plan || "starter",
+      ownerName: ownerName ?? undefined,
+      email: ownerEmail ?? undefined,
+      phone: mobile ?? undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    await db.update(companiesTable).set({ firebaseId }).where(eq(companiesTable.id, company.id));
+    req.log.info({ companyId: company.id, licenseKey, firebaseId }, "Company created and synced to Firebase");
+  } catch (fbErr: any) {
+    req.log.warn({ err: fbErr.message }, "Firebase sync failed — company saved locally");
+  }
+
+  res.json({ ...company, licenseKey });
 });
 
 router.patch("/super/companies/:id", requireSuperAdmin, async (req, res) => {
