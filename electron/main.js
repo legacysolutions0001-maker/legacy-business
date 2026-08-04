@@ -288,18 +288,70 @@ async function startBackend() {
   });
 
   try {
-    await waitForPort(apiPort, 30000);
+    await waitForPort(apiPort, 45000);
     logElectron(`✓ API Server ready on port ${apiPort}`);
   } catch (waitErr) {
     // Port never opened — the process either crashed or hung.
     // Give it a moment for stderr to flush, then surface the real error.
-    await new Promise((r) => setTimeout(r, 500));
-    const backendOutput = readLastLines(BACKEND_LOG, 50);
-    const detail = exitCode !== null
-      ? `The API server process exited with code ${exitCode} before opening port ${apiPort}.\n\nLast output from backend.log:\n${backendOutput}\n\nFull log: ${BACKEND_LOG}`
-      : `The API server did not open port ${apiPort} within 30 seconds.\n\nLast output from backend.log:\n${backendOutput}\n\nFull log: ${BACKEND_LOG}`;
-    logElectron(`STARTUP FAILURE: ${detail}`);
-    throw new Error(detail);
+    await new Promise((r) => setTimeout(r, 800));
+    const backendOutput = readLastLines(BACKEND_LOG, 60);
+
+    // Detect known failure patterns and show actionable guidance.
+    let friendlyMsg;
+    if (backendOutput.includes('ECONNREFUSED') || backendOutput.includes('connect ECONNREFUSED')) {
+      friendlyMsg = [
+        'Failed to start Legacy Business ERP.',
+        '',
+        'PostgreSQL is not running.',
+        '',
+        'Steps to fix:',
+        '  1. Press Win+R, type "services.msc", press Enter.',
+        '     Find "postgresql-x64-*" and click Start.',
+        '  2. Or open pgAdmin and start the server from there.',
+        '  3. If PostgreSQL is not installed, download it from:',
+        '     https://www.postgresql.org/download/windows/',
+        '     During installation, set the postgres password to "postgres"',
+        '     (or update the DB URL in the app settings later).',
+        '',
+        `Log files: ${LOG_DIR}`,
+      ].join('\n');
+    } else if (backendOutput.includes('password authentication failed') || backendOutput.includes('28P01') || backendOutput.includes('28000')) {
+      friendlyMsg = [
+        'Failed to start Legacy Business ERP.',
+        '',
+        'PostgreSQL authentication failed.',
+        'The database username or password is incorrect.',
+        '',
+        'Default connection:',
+        '  postgresql://postgres:postgres@localhost:5432/legacy_erp',
+        '',
+        'To fix: update the database URL in the app settings',
+        'to match your PostgreSQL username and password.',
+        '',
+        `Log files: ${LOG_DIR}`,
+      ].join('\n');
+    } else if (backendOutput.includes('does not exist') || backendOutput.includes('3D000') || backendOutput.includes('database')) {
+      friendlyMsg = [
+        'Failed to start Legacy Business ERP.',
+        '',
+        'The "legacy_erp" database could not be created or accessed.',
+        '',
+        'Please create it manually:',
+        '  1. Open pgAdmin or psql.',
+        '  2. Connect to your PostgreSQL server.',
+        '  3. Run: CREATE DATABASE legacy_erp;',
+        '',
+        `Log files: ${LOG_DIR}`,
+      ].join('\n');
+    } else {
+      const shortLog = backendOutput.slice(-600);
+      friendlyMsg = exitCode !== null
+        ? `Failed to start Legacy Business ERP.\n\nAPI server exited (code ${exitCode}) before opening port ${apiPort}.\n\nLast output:\n${shortLog}\n\nLog files: ${LOG_DIR}`
+        : `Failed to start Legacy Business ERP.\n\nAPI server did not start within 45 seconds.\n\nLast output:\n${shortLog}\n\nLog files: ${LOG_DIR}`;
+    }
+
+    logElectron(`STARTUP FAILURE:\n${friendlyMsg}`);
+    throw new Error(friendlyMsg);
   }
 }
 
