@@ -18,3 +18,13 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+FIREBASE_APP_ID = "1:41637512726:web:f3fbde31f97b35f4525737"
+FIREBASE_AUTH_DOMAIN = "legacy-business-erp.firebaseapp.com"
+FIREBASE_MESSAGING_SENDER_ID = "41637512726"
+FIREBASE_PROJECT_ID = "legacy-business-erp"
+FIREBASE_STORAGE_BUCKET = "legacy-business-erp.firebasestorage.app"
+SUPER_ADMIN_USERNAME = "bhullar01"
