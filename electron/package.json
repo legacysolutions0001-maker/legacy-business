@@ -83,7 +83,7 @@
       "artifactName": "Legacy Business ERP Setup.exe",
       "include": "installer/custom.nsi",
       "warningsAsErrors": false,
-      "installerLanguages": ["English"],
+      "installerLanguages": ["en_US"],
       "displayLanguageSelector": false
     },
     "portable": {
