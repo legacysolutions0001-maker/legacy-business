@@ -13,7 +13,7 @@
     "build:win": "npm run build:all && electron-builder --win",
     "build:win:portable": "npm run build:all && electron-builder --win portable",
     "build:linux": "npm run build:all && electron-builder --linux",
-    "build:all": "cd .. && pnpm run build:artifacts",
+    "build:all": "cd .. && pnpm --filter @workspace/legacy-business run build && pnpm --filter @workspace/api-server run build",
     "pack": "electron-builder --dir",
     "postinstall": "electron-builder install-app-deps"
   },
