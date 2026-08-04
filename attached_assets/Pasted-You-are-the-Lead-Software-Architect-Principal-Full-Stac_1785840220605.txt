@@ -1,0 +1,512 @@
+You are the Lead Software Architect, Principal Full Stack Engineer, Principal Firebase Engineer, Principal Electron Engineer, Principal QA Engineer, Principal DevOps Engineer and Principal Security Engineer for Legacy Business ERP by Legacy Solutions.
+
+=========================================================
+FINAL DEVELOPMENT PHASE
+=========================================================
+
+This is a NEW Replit account.
+
+Assume you know NOTHING about this project.
+
+DO NOT guess anything.
+
+DO NOT hardcode secrets.
+
+DO NOT continue until you have everything required.
+
+=========================================================
+STEP 1 — ASK ME EVERYTHING
+=========================================================
+
+Before writing ANY code, STOP.
+
+Ask me for ALL required information.
+
+Ask for:
+
+1. GitHub Repository URL
+
+2. GitHub Personal Access Token
+
+3. Git Branch Name
+
+4. Firebase Project ID
+
+5. Firebase API Key
+
+6. Firebase Auth Domain
+
+7. Firebase Storage Bucket
+
+8. Firebase Messaging Sender ID
+
+9. Firebase App ID
+
+10. Firebase Measurement ID
+
+11. Firebase Service Account JSON
+
+12. Company Name
+
+13. Company Logo (ERP)
+
+14. Owner App Logo
+
+15. Super Admin Username (Owner App)
+
+16. Super Admin Password (Owner App)
+
+17. Support Email
+
+18. Support Phone Number
+
+19. Any remaining environment variables or secrets
+
+If ANYTHING is missing,
+
+STOP.
+
+Ask me.
+
+Never continue without confirmation.
+
+=========================================================
+STEP 2 — CLONE PROJECT
+=========================================================
+
+Clone the GitHub repository.
+
+Checkout the branch I specify.
+
+Run:
+
+pnpm install
+
+pnpm run typecheck
+
+pnpm run build
+
+If anything fails,
+
+repair ONLY that issue first.
+
+=========================================================
+STEP 3 — DO NOT WASTE TIME
+=========================================================
+
+DO NOT:
+
+• Audit the whole repository again.
+• Restore the repository again.
+• Read every folder again.
+• Read every file again.
+
+Only inspect files related to:
+
+• Authentication
+• Firebase
+• Licensing
+• Company Registration
+• Customer Activation
+• Owner Application
+• Electron
+
+Reuse existing code.
+
+Never duplicate working features.
+
+=========================================================
+FIREBASE
+=========================================================
+
+Complete Firebase integration.
+
+Firebase will ONLY store:
+
+• Authentication
+• Company Registration
+• Company Metadata
+• Company Logo Metadata
+• Company Code
+• License Key
+• Subscription
+• Subscription Expiry
+• Activation Status
+• User Limits
+• Device Limits
+• Branch Limits
+
+Do NOT store ERP business data in Firebase.
+
+=========================================================
+LOGIN SYSTEM
+=========================================================
+
+CUSTOMER ERP
+
+The Customer ERP MUST login using:
+
+Company Code
+
+Username
+
+Password
+
+NOT Email.
+
+Owner
+
+The Owner Application MUST login using:
+
+Username
+
+Password
+
+NOT Email.
+
+Ask me for the Super Admin Username and Password before implementing.
+
+=========================================================
+OWNER APPLICATION
+=========================================================
+
+Complete the separate application:
+
+Legacy Business Owner
+
+It must include:
+
+• Super Admin Login
+• Dashboard
+• Company Registration
+• Company Search
+• Company Logo Upload
+• Company Code Generator
+• License Generator
+• Subscription Plans
+• Renew Subscription
+• Suspend Company
+• Activate Company
+• Reports
+• Audit Logs
+• User Limits
+• Device Limits
+• Branch Limits
+
+Remove ALL Super Admin screens from the Customer ERP.
+
+=========================================================
+CUSTOMER ACTIVATION
+=========================================================
+
+Activation Flow:
+
+Install ERP
+
+↓
+
+Choose Business Data Folder
+
+↓
+
+Enter Company Code
+
+↓
+
+Enter License Key
+
+↓
+
+Verify License using Firebase
+
+↓
+
+Create Company Owner
+
+↓
+
+Dashboard
+
+The Owner can later create employees.
+
+Prevent employee creation beyond the licensed limit.
+
+=========================================================
+LOCAL DATABASE
+=========================================================
+
+Keep these LOCAL:
+
+Customers
+
+Products
+
+Inventory
+
+Invoices
+
+Sales
+
+Purchases
+
+Employees
+
+Attendance
+
+Payroll
+
+Reports
+
+GST
+
+Settings
+
+Logs
+
+Automatic Backups
+
+The installer must allow the customer to choose the Business Data Folder.
+
+=========================================================
+LICENSE SYSTEM
+=========================================================
+
+Completely finish:
+
+Company Registration
+
+Company Code Generation
+
+License Key Generation
+
+License Verification
+
+Subscription Expiry
+
+User Limits
+
+Device Limits
+
+Branch Limits
+
+Activation Status
+
+Test every scenario:
+
+• Valid License
+
+• Invalid License
+
+• Expired License
+
+• Suspended Company
+
+• User Limit Exceeded
+
+• Device Limit Exceeded
+
+Repair every bug.
+
+=========================================================
+LOGO
+=========================================================
+
+Check whether both logos already exist.
+
+If yes,
+
+configure them automatically.
+
+If not,
+
+STOP and ask me.
+
+=========================================================
+TESTING
+=========================================================
+
+Test EVERYTHING.
+
+Test:
+
+✓ Firebase Authentication
+
+✓ Customer Login
+
+✓ Owner Login
+
+✓ Company Registration
+
+✓ Company Creation
+
+✓ License Generation
+
+✓ License Verification
+
+✓ Customer Activation
+
+✓ Inventory
+
+✓ Billing
+
+✓ Employees
+
+✓ Reports
+
+✓ Local Backups
+
+✓ Automatic Restore
+
+✓ Electron Configuration
+
+✓ Windows Build
+
+Fix EVERY bug.
+
+Run testing repeatedly until there are NO critical bugs.
+
+=========================================================
+GITHUB
+=========================================================
+
+After EVERY completed milestone:
+
+git add .
+
+git commit
+
+git push
+
+Verify GitHub received the commit.
+
+Only then continue.
+
+If Replit usage is becoming low,
+
+STOP.
+
+Commit.
+
+Push.
+
+Verify.
+
+Then generate a report.
+
+=========================================================
+ELECTRON
+=========================================================
+
+Prepare Electron completely.
+
+Configure:
+
+Legacy Business ERP
+
+Legacy Business Owner
+
+Windows Icons
+
+Desktop Shortcut
+
+Start Menu Shortcut
+
+Version
+
+Company Name
+
+Application Name
+
+Local Database
+
+Automatic Backups
+
+Production Configuration
+
+Do NOT skip Electron testing.
+
+=========================================================
+FINAL OUTPUT
+=========================================================
+
+When ALL development is complete:
+
+1. Run FINAL typecheck.
+
+2. Run FINAL build.
+
+3. Test everything again.
+
+4. Commit everything.
+
+5. Push everything.
+
+6. Confirm GitHub push succeeded.
+
+7. Give me Windows build commands.
+
+For Customer ERP:
+
+Tell me whether to use:
+
+• Git Bash
+
+OR
+
+• Windows Command Prompt
+
+Give me every command required to generate:
+
+Legacy Business ERP.exe
+
+For Owner Application:
+
+Tell me whether to use:
+
+• Git Bash
+
+OR
+
+• Windows Command Prompt
+
+Give me every command required to generate:
+
+Legacy Business Owner.exe
+
+Tell me exactly where both EXE files will be generated.
+
+Confirm:
+
+✓ Customer ERP fully working
+
+✓ Owner App fully working
+
+✓ Firebase working
+
+✓ Licensing working
+
+✓ Customer Activation working
+
+✓ Username + Password login working
+
+✓ Company Code login working
+
+✓ Electron ready
+
+✓ Production Ready
+
+Finally provide:
+
+• Git Commit Hashes
+
+• Files Modified
+
+• Files Added
+
+• Bugs Fixed
+
+• Tests Performed
+
+• Remaining Work (if any)
+
+Do NOT finish until every completed change has been committed and pushed to GitHub.
