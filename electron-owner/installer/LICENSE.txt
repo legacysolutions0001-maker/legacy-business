@@ -1,0 +1,45 @@
+END USER LICENSE AGREEMENT
+LEGACY BUSINESS OWNER
+Version 1.0.0
+
+IMPORTANT — READ CAREFULLY BEFORE INSTALLING OR USING THIS SOFTWARE
+
+This End User License Agreement ("Agreement") is a legal agreement between you
+("Licensee") and Legacy Solutions ("Licensor") for the Legacy Business Owner
+software product (collectively, the "Software").
+
+BY INSTALLING OR USING THE SOFTWARE, YOU AGREE TO BE BOUND BY THE TERMS OF
+THIS AGREEMENT.
+
+─────────────────────────────────────────────────────────────────────────────
+
+1. GRANT OF LICENSE
+
+This software is licensed exclusively to authorised personnel of Legacy Solutions
+for the purpose of managing company registrations, license generation, subscription
+control, and system administration. It is NOT licensed for general distribution.
+
+2. RESTRICTIONS
+
+Licensee may not distribute, sublicense, sell, or transfer this software or access
+credentials to any third party. All actions performed within this application are
+logged and attributed to the authenticated administrator.
+
+3. DATA AND PRIVACY
+
+This application communicates with Firebase Firestore for license and company
+management. It does not store customer business data.
+
+4. INTELLECTUAL PROPERTY
+
+The Software remains the exclusive property of Legacy Solutions. All rights reserved.
+
+5. CONTACT INFORMATION
+
+Legacy Solutions
+Email: legacysolutions0001@gmail.com
+Phone: +91 7452888421
+
+─────────────────────────────────────────────────────────────────────────────
+
+© 2025 Legacy Solutions. All Rights Reserved.

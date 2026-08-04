@@ -1,11 +1,11 @@
 END USER LICENSE AGREEMENT
 LEGACY BUSINESS ERP
-Version 1.0
+Version 1.0.0
 
 IMPORTANT — READ CAREFULLY BEFORE INSTALLING OR USING THIS SOFTWARE
 
 This End User License Agreement ("Agreement") is a legal agreement between you (either
-an individual or a single entity, referred to as "Licensee") and Legacy Business Team
+an individual or a single entity, referred to as "Licensee") and Legacy Solutions
 ("Licensor") for the Legacy Business ERP software product, which includes computer
 software and may include associated media, printed materials, and online or electronic
 documentation (collectively, the "Software").
@@ -19,8 +19,8 @@ INSTALL OR USE THE SOFTWARE.
 1. GRANT OF LICENSE
 
 Subject to the terms and conditions of this Agreement, Licensor hereby grants to
-Licensee a non-exclusive, non-transferable, limited license to install and use one (1)
-copy of the Software on a single computer or server owned or controlled by Licensee,
+Licensee a non-exclusive, non-transferable, limited license to install and use the
+Software on the number of computers or devices specified in the purchased license plan,
 solely for Licensee's internal business purposes.
 
 This license does not include the right to sublicense, and Licensee may not transfer
@@ -28,26 +28,41 @@ its rights under this Agreement without the prior written consent of Licensor.
 
 2. DESCRIPTION OF RIGHTS AND LIMITATIONS
 
-2.1 Use. Licensee may install and use the Software on one (1) computer or server.
-    Additional installations require additional licenses.
+2.1 Licensed Users. The Software may be used by the number of users specified in
+    Licensee's subscription plan. Additional users require additional licenses or
+    plan upgrades.
 
-2.2 Backup Copy. Licensee may make one (1) archival copy of the Software for backup
-    purposes, provided Licensee reproduces all copyright and proprietary notices.
+2.2 Licensed Devices. The Software may be installed on the number of devices specified
+    in Licensee's subscription plan. Each device installation is tracked and enforced
+    by the licensing system.
 
-2.3 No Reverse Engineering. Licensee may not reverse engineer, decompile, or
+2.3 Licensed Branches. Licensee may operate the number of branch locations specified
+    in their subscription plan. Additional branches require plan upgrades.
+
+2.4 Subscription Terms. This software is licensed on a subscription basis. Continued
+    use requires an active subscription. Upon expiry, the software will be restricted
+    until the subscription is renewed.
+
+2.5 Backup Copy. Licensee may make archival copies of their business data for backup
+    purposes. Licensor is not responsible for data loss due to hardware failure or
+    user error.
+
+2.6 No Reverse Engineering. Licensee may not reverse engineer, decompile, or
     disassemble the Software, except to the extent applicable law expressly permits
     such activity.
 
-2.4 No Separation of Components. The Software is licensed as a single product. Its
-    component parts may not be separated for use on more than one computer.
+2.7 No Separation of Components. The Software is licensed as a single product. Its
+    component parts may not be separated for use on more than the licensed number of
+    computers.
 
-2.5 No Rental. Licensee may not rent, lease, or lend the Software.
+2.8 No Rental. Licensee may not rent, lease, or lend the Software or license keys.
 
-2.6 No Transfer. Licensee may not permanently transfer all rights under this Agreement
+2.9 No Transfer. Licensee may not permanently transfer all rights under this Agreement
     without prior written approval of Licensor.
 
-2.7 Compliance with Laws. Licensee must comply with all applicable laws regarding the
-    use of the Software.
+2.10 Compliance with Laws. Licensee must comply with all applicable laws regarding the
+     use of the Software, including GST regulations, data protection laws, and
+     employment laws of India.
 
 3. INTELLECTUAL PROPERTY
 
@@ -64,26 +79,34 @@ Agreement.
 
 4. DATA AND PRIVACY
 
-4.1 Your Data. The Software stores your business data locally on your computer or
-    server. Licensor does not have access to your business data stored in the Software.
+4.1 Your Business Data. The Software stores your business data (inventory, invoices,
+    customers, employees, payroll, etc.) locally on your computer or server. Licensor
+    does not have access to your business data.
 
-4.2 Data Responsibility. Licensee is solely responsible for:
+4.2 License & Activation Data. The Software communicates with Licensor's servers
+    solely for the purpose of license verification, activation, and subscription
+    management. No business data is transmitted during this process.
+
+4.3 Data Responsibility. Licensee is solely responsible for:
     (a) Maintaining regular backups of all data stored in the Software.
     (b) The security of the server or computer where the Software is installed.
     (c) Compliance with data protection regulations applicable to Licensee's business.
+    (d) The accuracy and legality of all business data entered into the Software.
 
-4.3 No Data Collection. The Software does not transmit personal or business data to
-    Licensor's servers without Licensee's explicit consent.
+4.4 No Business Data Collection. The Software does not transmit personal or business
+    data to Licensor's servers without Licensee's explicit consent.
 
 5. SUPPORT AND UPDATES
 
-5.1 Support. Licensor may, at its sole discretion, provide technical support for the
-    Software. Support is not guaranteed and may be discontinued at any time.
+5.1 Support. Licensor provides technical support via email and phone during business
+    hours. Support contact details are listed in Section 11.
 
-5.2 Updates. Licensor may, at its sole discretion, create and provide updates to the
-    Software. This Agreement governs any updates provided to Licensee unless such
-    update is accompanied by a separate license, in which case the terms of that
-    license will govern.
+5.2 Updates. Software updates may be provided at Licensor's discretion. Major version
+    upgrades may require plan upgrades.
+
+5.3 Backup Responsibility. Licensee is solely responsible for maintaining daily backups
+    of their business database. Licensor recommends using the built-in automatic backup
+    feature and storing backups in a separate physical location.
 
 6. DISCLAIMER OF WARRANTIES
 
@@ -109,19 +132,21 @@ OF THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF LICENSOR HAS BEEN ADVISE
 THE POSSIBILITY OF SUCH DAMAGES.
 
 IN ANY CASE, LICENSOR'S ENTIRE LIABILITY UNDER ANY PROVISION OF THIS AGREEMENT SHALL
-BE LIMITED TO THE AMOUNT ACTUALLY PAID BY LICENSEE FOR THE SOFTWARE.
+BE LIMITED TO THE AMOUNT ACTUALLY PAID BY LICENSEE FOR THE SOFTWARE IN THE TWELVE (12)
+MONTHS PRECEDING THE CLAIM.
 
 8. TERMINATION
 
 Without prejudice to any other rights, Licensor may terminate this Agreement if
 Licensee fails to comply with the terms and conditions of this Agreement. In such
 event, Licensee must destroy all copies of the Software and all of its component parts.
+Licensee's data remains the property of Licensee and will not be deleted by Licensor.
 
 9. GOVERNING LAW
 
-This Agreement shall be governed by and construed in accordance with the laws of
-India. Any disputes arising under this Agreement shall be subject to the exclusive
-jurisdiction of the courts located in New Delhi, India.
+This Agreement shall be governed by and construed in accordance with the laws of India.
+Any disputes arising under this Agreement shall be subject to the exclusive jurisdiction
+of the courts located in India.
 
 10. ENTIRE AGREEMENT
 
@@ -132,13 +157,13 @@ the subject matter of this Agreement.
 
 11. CONTACT INFORMATION
 
-Legacy Business Team
-Email: support@legacybusiness.in
-Website: https://legacybusiness.in
+Legacy Solutions
+Email: legacysolutions0001@gmail.com
+Phone: +91 7452888421
 
 ─────────────────────────────────────────────────────────────────────────────────────
 
 By installing or using Legacy Business ERP, you acknowledge that you have read this
 Agreement, understand it, and agree to be bound by its terms and conditions.
 
-© 2025 Legacy Business Team. All Rights Reserved.
+© 2025 Legacy Solutions. All Rights Reserved.

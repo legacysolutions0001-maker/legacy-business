@@ -1,7 +1,7 @@
 {
-  "name": "legacy-business-erp",
+  "name": "legacy-business-owner",
   "version": "1.0.0",
-  "description": "Legacy Business ERP — Complete Business Management Solution for Indian SMEs",
+  "description": "Legacy Business Owner — Management & Licensing Control Application",
   "main": "main.js",
   "author": "Legacy Solutions",
   "license": "SEE LICENSE IN installer/LICENSE.txt",
@@ -24,11 +24,11 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.legacysolutions.erp",
-    "productName": "Legacy Business ERP",
+    "appId": "com.legacysolutions.owner",
+    "productName": "Legacy Business Owner",
     "copyright": "Copyright © 2025 Legacy Solutions",
     "directories": {
-      "output": "../dist-electron"
+      "output": "../dist-electron-owner"
     },
     "files": [
       "main.js",
@@ -66,8 +66,7 @@
       "icon": "icons/icon.ico",
       "requestedExecutionLevel": "requireAdministrator",
       "publisherName": "Legacy Solutions",
-      "legalTrademarks": "Legacy Solutions",
-      "fileAssociations": []
+      "legalTrademarks": "Legacy Solutions"
     },
     "nsis": {
       "oneClick": false,
@@ -79,17 +78,17 @@
       "installerHeaderIcon": "icons/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Legacy Business ERP",
+      "shortcutName": "Legacy Business Owner",
       "menuCategory": "Legacy Solutions",
       "license": "installer/LICENSE.txt",
-      "artifactName": "Legacy Business ERP Setup.exe",
+      "artifactName": "Legacy Business Owner Setup.exe",
       "include": "installer/custom.nsi",
       "warningsAsErrors": false,
       "installerLanguages": ["English"],
       "displayLanguageSelector": false
     },
     "portable": {
-      "artifactName": "Legacy Business ERP Portable.exe"
+      "artifactName": "Legacy Business Owner Portable.exe"
     },
     "linux": {
       "target": ["AppImage", "deb"],
