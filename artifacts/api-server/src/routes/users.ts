@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, usersTable, companiesTable } from "@workspace/db";
+import { eq, and, count } from "drizzle-orm";
 import { requireResolvedCompany, requireSuperAdmin } from "../middlewares/auth";
 
 const router = Router();
@@ -50,6 +50,18 @@ router.post("/company/users", requireResolvedCompany, async (req, res) => {
   if (!req.auth?.companyId || !["owner","sub_admin"].includes(req.auth.role)) { res.status(403).json({ error: "Insufficient permissions" }); return; }
   const { username, password, name, email, role } = req.body;
   if (!username || !password || !name) { res.status(400).json({ error: "username, password, name required" }); return; }
+
+  // Enforce user limit
+  const [company] = await db.select({ maxUsers: companiesTable.maxUsers }).from(companiesTable).where(eq(companiesTable.id, req.auth.companyId)).limit(1);
+  if (company) {
+    const [{ activeCount }] = await db.select({ activeCount: count() }).from(usersTable)
+      .where(and(eq(usersTable.companyId, req.auth.companyId), eq(usersTable.isActive, true)));
+    if (Number(activeCount) >= company.maxUsers) {
+      res.status(403).json({ error: `User limit (${company.maxUsers}) reached. Please deactivate a user or upgrade your plan.` });
+      return;
+    }
+  }
+
   const existing = await db.select().from(usersTable).where(eq(usersTable.username, username.toLowerCase())).limit(1);
   if (existing.length > 0) { res.status(409).json({ error: "Username already exists" }); return; }
   const hash = await bcrypt.hash(password, 10);

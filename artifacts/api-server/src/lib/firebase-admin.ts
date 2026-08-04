@@ -25,8 +25,8 @@ function getFirebaseApp() {
 }
 
 export function getFirestoreDb() {
-  getFirebaseApp();
-  return getFirestore();
+  const app = getFirebaseApp();
+  return getFirestore(app);
 }
 
 // ─── License key helpers ──────────────────────────────────────────────────────
@@ -60,7 +60,13 @@ export async function syncCompanyToFirestore(data: FirestoreCompany): Promise<st
   const db = getFirestoreDb();
   const docRef = db.collection("companies").doc(data.companyCode);
   const now = new Date().toISOString();
-  await docRef.set({ ...data, updatedAt: now }, { merge: true });
+  // Strip undefined values — Firestore rejects documents containing `undefined`
+  // fields. Optional TypeScript fields are `undefined` when not provided, so
+  // we filter them out here rather than require every caller to pass `null`.
+  const cleanData = Object.fromEntries(
+    Object.entries({ ...data, updatedAt: now }).filter(([, v]) => v !== undefined),
+  );
+  await docRef.set(cleanData, { merge: true });
   return docRef.id;
 }
 

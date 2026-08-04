@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, branchesTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { db, branchesTable, companiesTable } from "@workspace/db";
+import { eq, and, sql, count } from "drizzle-orm";
 import { requireResolvedCompany, resolveCompanyId } from "../middlewares/auth";
 
 const router = Router();
@@ -23,6 +23,18 @@ router.post("/branches", requireResolvedCompany, async (req, res) => {
     isMain?: boolean; isActive?: boolean;
   };
   if (!name?.trim()) { res.status(400).json({ error: "name is required" }); return; }
+
+  // Enforce branch limit
+  const [company] = await db.select({ maxBranches: companiesTable.maxBranches }).from(companiesTable).where(eq(companiesTable.id, companyId)).limit(1);
+  if (company) {
+    const [{ branchCount }] = await db.select({ branchCount: count() }).from(branchesTable)
+      .where(and(eq(branchesTable.companyId, companyId), eq(branchesTable.isActive, true)));
+    if (Number(branchCount) >= company.maxBranches) {
+      res.status(403).json({ error: `Branch limit (${company.maxBranches}) reached. Please deactivate a branch or upgrade your plan.` });
+      return;
+    }
+  }
+
   const [row] = await db.insert(branchesTable)
     .values({ companyId, name: name.trim(), code: code?.trim() || null, address: address || null, city: city || null, state: state || null, pincode: pincode || null, phone: phone || null, isMain: isMain ?? false, isActive: isActive ?? true })
     .returning();
