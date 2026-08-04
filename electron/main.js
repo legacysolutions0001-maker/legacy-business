@@ -17,9 +17,11 @@ const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const BACKUP_DIR_DEFAULT = path.join(app.getPath('documents'), 'LegacyBusinessBackups');
 
 // ─── Logging ─────────────────────────────────────────────────────────────────
-const LOG_DIR = path.join(app.getPath('userData'), 'logs');
+const LOG_DIR      = path.join(app.getPath('userData'), 'logs');
 const ELECTRON_LOG = path.join(LOG_DIR, 'electron.log');
 const BACKEND_LOG  = path.join(LOG_DIR, 'backend.log');
+const STARTUP_LOG  = path.join(LOG_DIR, 'startup.log');
+const CRASH_LOG    = path.join(LOG_DIR, 'crash.log');
 
 function ensureLogDir() {
   try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch {}
@@ -29,6 +31,7 @@ function logElectron(msg) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
   process.stdout.write(line);
   try { fs.appendFileSync(ELECTRON_LOG, line); } catch {}
+  try { fs.appendFileSync(STARTUP_LOG, line); } catch {}
 }
 
 function logBackend(msg) {
@@ -36,7 +39,13 @@ function logBackend(msg) {
   try { fs.appendFileSync(BACKEND_LOG, line); } catch {}
 }
 
-function readLastLines(filePath, maxLines = 40) {
+function logCrash(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  try { fs.appendFileSync(CRASH_LOG, line); } catch {}
+  try { fs.appendFileSync(ELECTRON_LOG, line); } catch {}
+}
+
+function readLastLines(filePath, maxLines = 60) {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
     const lines = content.trim().split('\n');
@@ -82,7 +91,7 @@ function findFreePort(start = 3000) {
   });
 }
 
-function waitForPort(port, timeout = 30000) {
+function waitForPort(port, timeout = 45000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     function tryConnect() {
@@ -213,7 +222,7 @@ function showApp() {
 async function startBackend() {
   apiPort = await findFreePort(8080);
 
-  // Load Firebase service account from bundled resource file (not committed to git)
+  // Load Firebase service account from bundled resource file
   const saPath = path.join(RESOURCES, 'firebase-service-account.json');
   let firebaseSaJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '';
   if (!firebaseSaJson && fs.existsSync(saPath)) {
@@ -222,8 +231,6 @@ async function startBackend() {
     }
   }
 
-  // Default DATABASE_URL to local PostgreSQL if not configured.
-  // Users can override via the Settings screen or by setting the env variable.
   const databaseUrl =
     settings.databaseUrl ||
     process.env.DATABASE_URL ||
@@ -231,6 +238,14 @@ async function startBackend() {
 
   const env = {
     ...process.env,
+    // ── CRITICAL FIX ──────────────────────────────────────────────────────────
+    // process.execPath in a packaged Electron app points to the Electron binary,
+    // not to node.exe. Without ELECTRON_RUN_AS_NODE=1, spawning process.execPath
+    // launches a SECOND Electron app instance, which immediately hits the single-
+    // instance lock and exits with code 0. Setting this flag tells the Electron
+    // binary to behave like plain Node.js and just run the script.
+    ELECTRON_RUN_AS_NODE: '1',
+    // ─────────────────────────────────────────────────────────────────────────
     PORT: String(apiPort),
     NODE_ENV: 'production',
     DATABASE_URL: databaseUrl,
@@ -246,22 +261,29 @@ async function startBackend() {
 
   // Rotate backend log: keep previous run as backend.log.prev
   try {
-    if (fs.existsSync(BACKEND_LOG)) {
-      fs.renameSync(BACKEND_LOG, BACKEND_LOG + '.prev');
-    }
+    if (fs.existsSync(BACKEND_LOG)) fs.renameSync(BACKEND_LOG, BACKEND_LOG + '.prev');
+  } catch {}
+  try {
+    if (fs.existsSync(STARTUP_LOG)) fs.renameSync(STARTUP_LOG, STARTUP_LOG + '.prev');
   } catch {}
 
-  logElectron(`Starting API server — port ${apiPort}, API_DIST=${API_DIST}`);
+  logElectron(`Starting API server — port ${apiPort}`);
+  logElectron(`API_DIST: ${API_DIST}`);
   logElectron(`DATABASE_URL prefix: ${databaseUrl.replace(/:\/\/.*@/, '://<credentials>@')}`);
   logElectron(`Firebase SA JSON present: ${!!firebaseSaJson}`);
+  logElectron(`ELECTRON_RUN_AS_NODE: ${env.ELECTRON_RUN_AS_NODE}`);
+  logElectron(`process.execPath: ${process.execPath}`);
 
   if (!fs.existsSync(API_DIST)) {
     const err = new Error(`API server bundle not found at: ${API_DIST}`);
-    logElectron(`FATAL: ${err.message}`);
+    logCrash(`FATAL: ${err.message}`);
     throw err;
   }
 
+  // Spawn the API server using the Electron binary as Node.js (ELECTRON_RUN_AS_NODE=1)
   const nodeExe = process.execPath;
+  logElectron(`Spawning: ${nodeExe} --enable-source-maps ${API_DIST}`);
+
   apiProcess = spawn(nodeExe, ['--enable-source-maps', API_DIST], {
     env,
     cwd: path.dirname(API_DIST),
@@ -271,6 +293,7 @@ async function startBackend() {
   apiProcess.stdout?.on('data', (d) => {
     const text = d.toString().trim();
     logBackend(`[stdout] ${text}`);
+    logElectron(`[API] ${text}`);
   });
 
   apiProcess.stderr?.on('data', (d) => {
@@ -281,22 +304,23 @@ async function startBackend() {
 
   // Track early exit — if the process dies before port is ready, surface the real error
   let exitCode = null;
+  let exitSignal = null;
   apiProcess.on('exit', (code, signal) => {
     exitCode = code;
+    exitSignal = signal;
     logElectron(`API process exited — code=${code}, signal=${signal}`);
     logBackend(`[exit] code=${code} signal=${signal}`);
+    logCrash(`API server exited unexpectedly — code=${code} signal=${signal}`);
   });
 
   try {
     await waitForPort(apiPort, 45000);
     logElectron(`✓ API Server ready on port ${apiPort}`);
   } catch (waitErr) {
-    // Port never opened — the process either crashed or hung.
-    // Give it a moment for stderr to flush, then surface the real error.
-    await new Promise((r) => setTimeout(r, 800));
-    const backendOutput = readLastLines(BACKEND_LOG, 60);
+    // Port never opened — surface the real error from logs
+    await new Promise((r) => setTimeout(r, 1000));
+    const backendOutput = readLastLines(BACKEND_LOG, 80);
 
-    // Detect known failure patterns and show actionable guidance.
     let friendlyMsg;
     if (backendOutput.includes('ECONNREFUSED') || backendOutput.includes('connect ECONNREFUSED')) {
       friendlyMsg = [
@@ -322,35 +346,33 @@ async function startBackend() {
         'PostgreSQL authentication failed.',
         'The database username or password is incorrect.',
         '',
-        'Default connection:',
-        '  postgresql://postgres:postgres@localhost:5432/legacy_erp',
+        'Default connection: postgresql://postgres:postgres@localhost:5432/legacy_erp',
         '',
         'To fix: update the database URL in the app settings',
         'to match your PostgreSQL username and password.',
         '',
         `Log files: ${LOG_DIR}`,
       ].join('\n');
-    } else if (backendOutput.includes('does not exist') || backendOutput.includes('3D000') || backendOutput.includes('database')) {
+    } else if (backendOutput.includes('does not exist') || backendOutput.includes('3D000')) {
       friendlyMsg = [
         'Failed to start Legacy Business ERP.',
         '',
-        'The "legacy_erp" database could not be created or accessed.',
+        'The "legacy_erp" database does not exist.',
         '',
-        'Please create it manually:',
+        'Please create it:',
         '  1. Open pgAdmin or psql.',
-        '  2. Connect to your PostgreSQL server.',
-        '  3. Run: CREATE DATABASE legacy_erp;',
+        '  2. Run: CREATE DATABASE legacy_erp;',
         '',
         `Log files: ${LOG_DIR}`,
       ].join('\n');
     } else {
-      const shortLog = backendOutput.slice(-600);
+      const shortLog = backendOutput.slice(-800);
       friendlyMsg = exitCode !== null
         ? `Failed to start Legacy Business ERP.\n\nAPI server exited (code ${exitCode}) before opening port ${apiPort}.\n\nLast output:\n${shortLog}\n\nLog files: ${LOG_DIR}`
         : `Failed to start Legacy Business ERP.\n\nAPI server did not start within 45 seconds.\n\nLast output:\n${shortLog}\n\nLog files: ${LOG_DIR}`;
     }
 
-    logElectron(`STARTUP FAILURE:\n${friendlyMsg}`);
+    logCrash(`STARTUP FAILURE:\n${friendlyMsg}`);
     throw new Error(friendlyMsg);
   }
 }
@@ -371,6 +393,7 @@ async function startFrontend() {
         '.css': 'text/css', '.json': 'application/json', '.png': 'image/png',
         '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
         '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
+        '.woff': 'font/woff', '.ttf': 'font/ttf',
       }[ext] || 'application/octet-stream';
       try {
         const content = fs.readFileSync(filePath);
@@ -445,55 +468,60 @@ ipcMain.handle('show-notification', (_, { title, body }) => {
 });
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
-app.whenReady().then(async () => {
-  ensureLogDir();
-  logElectron('=== Legacy Business ERP starting ===');
-  logElectron(`Version: 1.0.0 | Electron: ${process.versions.electron} | Node: ${process.versions.node}`);
-  logElectron(`Resources: ${RESOURCES}`);
-  logElectron(`userData: ${app.getPath('userData')}`);
-  logElectron(`Logs: ${LOG_DIR}`);
-
-  // Prevent multiple instances
-  const gotLock = app.requestSingleInstanceLock();
-  if (!gotLock) {
-    logElectron('Another instance already running — quitting.');
-    app.quit();
-    return;
-  }
-
+// FIX: requestSingleInstanceLock MUST be called at the top level, before
+// app.whenReady(). Calling it inside whenReady() is against Electron docs and
+// can cause unpredictable lock behaviour on Windows.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  // A real second instance — focus the existing window and exit this one.
+  app.quit();
+} else {
   app.on('second-instance', () => { showApp(); });
 
-  nativeTheme.themeSource = settings.theme || 'dark';
+  app.whenReady().then(async () => {
+    ensureLogDir();
+    logElectron('=== Legacy Business ERP starting ===');
+    logElectron(`Version: 1.0.0 | Electron: ${process.versions.electron} | Node: ${process.versions.node}`);
+    logElectron(`Resources: ${RESOURCES}`);
+    logElectron(`userData: ${app.getPath('userData')}`);
+    logElectron(`Logs: ${LOG_DIR}`);
+    logElectron(`API_DIST: ${API_DIST}`);
+    logElectron(`FRONTEND: ${FRONTEND}`);
+    logElectron(`API_DIST exists: ${fs.existsSync(API_DIST)}`);
+    logElectron(`FRONTEND exists: ${fs.existsSync(FRONTEND)}`);
 
-  createSplash();
+    nativeTheme.themeSource = settings.theme || 'dark';
 
-  try {
-    logElectron('Starting backend and frontend servers...');
-    await Promise.all([startBackend(), startFrontend()]);
-    logElectron('Both servers ready — creating main window.');
-    createTray();
-    createMainWindow();
-  } catch (err) {
-    logElectron(`FATAL startup error: ${err.message}`);
-    const shortMsg = err.message.length > 2000 ? err.message.substring(0, 2000) + '\n...(truncated, see log)' : err.message;
-    dialog.showErrorBox(
-      'Legacy Business ERP — Startup Error',
-      `${shortMsg}\n\nLog files are at:\n${LOG_DIR}`
-    );
-    app.quit();
-  }
-});
+    createSplash();
 
-app.on('window-all-closed', () => {
-  // Keep app alive in tray on Windows/Linux
-  if (process.platform === 'darwin') app.quit();
-});
+    try {
+      logElectron('Starting backend and frontend servers...');
+      await Promise.all([startBackend(), startFrontend()]);
+      logElectron('Both servers ready — creating main window.');
+      createTray();
+      createMainWindow();
+    } catch (err) {
+      logCrash(`FATAL startup error: ${err.message}`);
+      const shortMsg = err.message.length > 2000 ? err.message.substring(0, 2000) + '\n...(truncated, see log)' : err.message;
+      dialog.showErrorBox(
+        'Legacy Business ERP — Startup Error',
+        `${shortMsg}\n\nLog files are at:\n${LOG_DIR}`
+      );
+      app.quit();
+    }
+  });
 
-app.on('activate', () => { if (!mainWindow) createMainWindow(); });
+  app.on('window-all-closed', () => {
+    // Keep app alive in tray on Windows/Linux
+    if (process.platform === 'darwin') app.quit();
+  });
 
-app.on('before-quit', () => {
-  logElectron('App quitting.');
-  app.isQuitting = true;
-  if (apiProcess) { apiProcess.kill(); apiProcess = null; }
-  if (frontendServer) { frontendServer.close(); frontendServer = null; }
-});
+  app.on('activate', () => { if (!mainWindow) createMainWindow(); });
+
+  app.on('before-quit', () => {
+    logElectron('App quitting.');
+    app.isQuitting = true;
+    if (apiProcess) { apiProcess.kill(); apiProcess = null; }
+    if (frontendServer) { frontendServer.close(); frontendServer = null; }
+  });
+}
