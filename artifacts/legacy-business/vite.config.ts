@@ -20,12 +20,17 @@ const apiPort = !isReplit
   ? (process.env.API_PORT ?? process.env.PORT ?? '8080')
   : null;
 
+// Detect if we're in a pure build (no dev server needed).
+// During `vite build`, PORT is irrelevant — only dev/preview need it.
+const isBuildMode = process.argv.includes('build');
+
 let rawPort: string;
 if (isReplit) {
   rawPort = process.env.PORT ?? '';
-  if (!rawPort) {
+  if (!rawPort && !isBuildMode) {
     throw new Error('PORT environment variable is required but was not provided.');
   }
+  rawPort = rawPort || '5173'; // safe fallback for build mode only
 } else {
   rawPort = process.env.FRONTEND_PORT ?? '5173';
 }
