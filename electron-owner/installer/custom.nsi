@@ -8,10 +8,10 @@
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Legacy Business Owner v1.0.0 by Legacy Solutions.$\r$\n$\r$\nLegacy Business Owner provides:$\r$\n$\r$\n  • Super Admin Authentication$\r$\n  • Company Registration & Management$\r$\n  • License Key Generation$\r$\n  • Subscription & Plan Control$\r$\n  • User, Device & Branch Limit Management$\r$\n  • Firebase Synchronisation$\r$\n  • Reports & Analytics$\r$\n$\r$\nThis application is for authorised Legacy Solutions personnel only.$\r$\n$\r$\nClick Next to continue."
 
 ; ── Custom finish page ─────────────────────────────────────────────────────
+; Note: MUI_FINISHPAGE_RUN is defined by electron-builder's
+; assistedInstaller.nsh — do NOT redefine it here.
 !define MUI_FINISHPAGE_TITLE "Installation Complete"
 !define MUI_FINISHPAGE_TEXT "Legacy Business Owner has been installed successfully.$\r$\n$\r$\nFor support: legacysolutions0001@gmail.com$\r$\nPhone: +91 7452888421$\r$\n$\r$\nClick Finish to launch the application."
-!define MUI_FINISHPAGE_RUN "$INSTDIR\Legacy Business Owner.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Launch Legacy Business Owner"
 
 ; ── Registry entries for Add/Remove Programs ───────────────────────────────
 Section "Registry"

@@ -8,12 +8,10 @@
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Legacy Business ERP v1.0.0 by Legacy Solutions.$\r$\n$\r$\nLegacy Business ERP is a complete business management solution including:$\r$\n$\r$\n  • Inventory Management$\r$\n  • GST Billing & Invoicing$\r$\n  • Customer & Supplier Management$\r$\n  • HR, Attendance & Payroll$\r$\n  • Financial Reports & Day Book$\r$\n  • Automatic Daily Backup & Restore$\r$\n  • Branch Management$\r$\n$\r$\nClick Next to continue."
 
 ; ── Custom finish page ─────────────────────────────────────────────────────
+; Note: MUI_FINISHPAGE_RUN and MUI_FINISHPAGE_SHOWREADME are defined by
+; electron-builder's assistedInstaller.nsh — do NOT redefine them here.
 !define MUI_FINISHPAGE_TITLE "Installation Complete"
 !define MUI_FINISHPAGE_TEXT "Legacy Business ERP has been installed successfully.$\r$\n$\r$\nFor support: legacysolutions0001@gmail.com$\r$\nPhone: +91 7452888421$\r$\n$\r$\nClick Finish to launch the application."
-!define MUI_FINISHPAGE_RUN "$INSTDIR\Legacy Business ERP.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Launch Legacy Business ERP"
-!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\README.txt"
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "View Quick Start Guide"
 
 ; ── Registry entries for Add/Remove Programs ───────────────────────────────
 Section "Registry"
