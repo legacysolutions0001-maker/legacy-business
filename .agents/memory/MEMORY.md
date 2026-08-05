@@ -1,0 +1,1 @@
+- [Electron API runtime packaging](electron-api-runtime-packaging.md) — externalized Firebase dependencies must ship with an explicit runtime manifest and dependency tree.

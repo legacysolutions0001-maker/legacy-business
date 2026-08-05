@@ -176,7 +176,15 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
         name: "legacy-api-runtime",
         version: "1.0.0",
         private: true,
-        dependencies: { "firebase-admin": firebaseVersion },
+        // debug (used by the Firebase/Google Cloud dependency graph) treats
+        // supports-color as an optional peer. npm therefore omits it from a
+        // production install unless the packaged runtime requests it directly.
+        // The bundled ESM entry still contains debug's require("supports-color")
+        // call, so keep the CommonJS-compatible v8 line explicitly installed.
+        dependencies: {
+          "firebase-admin": firebaseVersion,
+          "supports-color": "^8.1.1",
+        },
       },
       null,
       2

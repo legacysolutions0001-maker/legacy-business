@@ -59,6 +59,18 @@ echo "▶ [5/8] Building API server..."
 PORT=8080 BASE_PATH=/ pnpm --filter @workspace/api-server run build
 echo "   ✓ API server built → artifacts/api-server/dist/"
 
+API_DIST_DIR="$REPO_ROOT/artifacts/api-server/dist"
+for required_path in \
+  "$API_DIST_DIR/index.mjs" \
+  "$API_DIST_DIR/package.json" \
+  "$API_DIST_DIR/node_modules"; do
+  if [ ! -e "$required_path" ]; then
+    echo "   ❌ API runtime packaging prerequisite missing: $required_path"
+    exit 1
+  fi
+done
+echo "   ✓ API runtime package.json and node_modules verified"
+
 # ── Step 5: Build frontend ────────────────────────────────────────────────────
 echo "▶ [6/8] Building frontend..."
 PORT=21973 BASE_PATH=/ pnpm --filter @workspace/legacy-business run build
@@ -73,6 +85,20 @@ echo "   ✓ Electron dependencies installed"
 # ── Step 7: Build Windows installer ──────────────────────────────────────────
 echo "▶ [8/8] Building Windows installer..."
 npx electron-builder --win --x64
+
+PACKAGED_API_DIST="$OUTPUT_DIR/win-unpacked/resources/api-server/dist"
+for required_path in \
+  "$PACKAGED_API_DIST/index.mjs" \
+  "$PACKAGED_API_DIST/package.json" \
+  "$PACKAGED_API_DIST/node_modules"; do
+  if [ ! -e "$required_path" ]; then
+    echo "   ❌ Packaged API runtime file missing: $required_path"
+    echo "   electron-builder did not preserve the complete API runtime tree."
+    exit 1
+  fi
+done
+echo "   ✓ Packaged API runtime verified under win-unpacked/resources/api-server/dist/"
+
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
 echo "║  ✅  Build Complete!                                 ║"
