@@ -245,6 +245,7 @@ async function startBackend() {
     // instance lock and exits with code 0. Setting this flag tells the Electron
     // binary to behave like plain Node.js and just run the script.
     ELECTRON_RUN_AS_NODE: '1',
+    ELECTRON_MODE: '1',
     // ─────────────────────────────────────────────────────────────────────────
     PORT: String(apiPort),
     NODE_ENV: 'production',
@@ -382,8 +383,37 @@ async function startFrontend() {
   frontendPort = await findFreePort(21973);
   return new Promise((resolve, reject) => {
     frontendServer = http.createServer((req, res) => {
-      let filePath = path.join(FRONTEND, req.url === '/' ? 'index.html' : req.url);
-      // SPA fallback
+      const urlPath = (req.url || '/').split('?')[0];
+
+      // ── Proxy /api/* to the Express backend ───────────────────────────────
+      // CRITICAL: The frontend is served on a different port from the API.
+      // Without this proxy, relative /api/* fetch calls from the React app
+      // would hit the static server (and get SPA index.html back), so login
+      // and every API call would silently fail.
+      if (urlPath.startsWith('/api')) {
+        const options = {
+          hostname: '127.0.0.1',
+          port: apiPort,
+          path: req.url,
+          method: req.method,
+          headers: { ...req.headers, host: `127.0.0.1:${apiPort}` },
+        };
+        const proxy = http.request(options, (proxyRes) => {
+          res.writeHead(proxyRes.statusCode, proxyRes.headers);
+          proxyRes.pipe(res, { end: true });
+        });
+        proxy.on('error', (err) => {
+          logElectron(`API proxy error: ${err.message}`);
+          res.writeHead(502);
+          res.end('Bad Gateway');
+        });
+        req.pipe(proxy, { end: true });
+        return;
+      }
+
+      // ── Serve static frontend files ────────────────────────────────────────
+      let filePath = path.join(FRONTEND, urlPath === '/' ? 'index.html' : urlPath);
+      // SPA fallback — any path without a file extension returns index.html
       if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         filePath = path.join(FRONTEND, 'index.html');
       }

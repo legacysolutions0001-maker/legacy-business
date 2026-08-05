@@ -10,7 +10,14 @@ const COOKIE_NAME = "lb_token";
 // On Replit (both dev preview and production) all traffic is HTTPS, so
 // secure: true is correct. Locally (http://localhost) the browser silently
 // drops secure cookies, so we disable the flag outside Replit.
-const isSecure = process.env.REPL_ID !== undefined || process.env.NODE_ENV === "production";
+// Secure cookies require HTTPS. On Replit (REPL_ID set) traffic is always
+// HTTPS. In production deployments NODE_ENV=production and HTTPS is assumed.
+// In Electron, NODE_ENV=production is injected but the app uses plain HTTP on
+// localhost — ELECTRON_MODE=1 opts out of the secure flag so Chromium stores
+// the cookie correctly over HTTP.
+const isSecure =
+  process.env.REPL_ID !== undefined ||
+  (process.env.NODE_ENV === "production" && process.env.ELECTRON_MODE !== "1");
 
 const COOKIE_OPTS = {
   httpOnly: true,

@@ -1,107 +1,91 @@
 # Windows Build Guide — Legacy Business ERP & Owner App
-> Version 1.0.0 | Publisher: Legacy Solutions
+> Version 1.0.0 | Publisher: Legacy Solutions  
+> Support: legacysolutions0001@gmail.com | +91 7452888421
 
-This guide explains how to produce the two Windows installer EXE files:
+This guide produces two Windows installer EXE files:
 
-| App | Output file |
-|-----|------------|
-| Legacy Business ERP | `dist-electron/Legacy Business ERP Setup.exe` |
-| Legacy Business Owner | `dist-electron-owner/Legacy Business Owner Setup.exe` |
+| App | Installer | Portable |
+|-----|-----------|---------|
+| Legacy Business ERP | `dist-electron/Legacy Business ERP Setup.exe` | `dist-electron/Legacy Business ERP Portable.exe` |
+| Legacy Business Owner | `dist-electron-owner/Legacy Business Owner Setup.exe` | `dist-electron-owner/Legacy Business Owner Portable.exe` |
 
 ---
 
 ## Prerequisites
 
-Install these on your Windows build machine:
+Install on your Windows build machine (Git Bash):
 
 | Tool | Version | Download |
 |------|---------|----------|
 | Node.js | 20 LTS or 22 LTS | https://nodejs.org |
 | pnpm | v9 or v10 | `npm install -g pnpm` |
 | Git | any recent | https://git-scm.com |
-| Git Bash | included with Git for Windows | — |
-
-> **Use Git Bash for all commands below** (not PowerShell or CMD).
 
 ---
 
 ## Step 1 — Clone the repository
 
 ```bash
-git clone https://ghp_YOUR_TOKEN@github.com/legacysolutions0001-maker/legacy-business.git
+git clone https://github.com/legacysolutions0001-maker/legacy-business.git
 cd legacy-business
 git checkout main
 ```
 
 ---
 
-## Step 2 — Install dependencies
+## Step 2 — Set environment variables (Git Bash)
+
+Before building, export these in your Git Bash terminal (or add them to your Windows System Environment Variables):
 
 ```bash
-pnpm install
+# PostgreSQL connection (default works if you installed PG with password "postgres")
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/legacy_erp"
+
+# Super admin credentials
+export SUPER_ADMIN_USERNAME="your_super_admin_username"
+export SUPER_ADMIN_PASSWORD="your_super_admin_password"
+
+# Firebase (paste the full service account JSON on one line)
+export FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"...","client_email":"...",...}'
+export FIREBASE_PROJECT_ID="your-firebase-project-id"
+export FIREBASE_STORAGE_BUCKET="your-project.firebasestorage.app"
+
+# Session secret (keep this private and consistent across installs)
+export SESSION_SECRET="your_session_secret_here"
 ```
+
+> **Tip:** Save these in a file like `build-env.sh` (keep it out of git — add it to `.gitignore`) and run `source build-env.sh` before each build.
 
 ---
 
-## Step 3 — Create the Firebase Service Account file
+## Step 3 — Build Customer ERP
 
-This file is **not committed to git** (it is in `.gitignore`).
-You must create it manually before building.
-
-1. Create a file named `firebase-service-account.json` in the **repo root** (same folder as `package.json`).
-2. Paste the Firebase Service Account JSON into it (the same JSON you stored in the `FIREBASE_SERVICE_ACCOUNT_JSON` secret).
-
-```
-legacy-business/
-├── firebase-service-account.json   ← CREATE THIS FILE
-├── electron/
-├── electron-owner/
-├── artifacts/
-└── ...
+```bash
+bash electron/build-windows.sh
 ```
 
-> ⚠️ Never commit this file. It is already listed in `.gitignore`.
+This script automatically:
+1. Checks prerequisites (Node.js, pnpm, icons)
+2. Creates `firebase-service-account.json` from `$FIREBASE_SERVICE_ACCOUNT_JSON`
+3. Installs all workspace dependencies (`pnpm install`)
+4. Builds the Express API server → `artifacts/api-server/dist/`
+5. Builds the React frontend → `artifacts/legacy-business/dist/public/`
+6. Installs Electron dependencies
+7. Packages the Windows installer and portable EXE
+
+**Output:** `dist-electron/Legacy Business ERP Setup.exe`  
+**Also:** `dist-electron/Legacy Business ERP Portable.exe`
 
 ---
 
-## Step 4 — Build all artifacts (frontend + API)
+## Step 4 — Build Owner App
 
 ```bash
-pnpm run build:artifacts
+bash electron-owner/build-windows.sh
 ```
 
-This builds:
-- `artifacts/legacy-business/dist/public/` — React frontend
-- `artifacts/api-server/dist/` — Express API bundle
-- `lib/db/migrations/` — Database migration files
-
----
-
-## Step 5 — Build the ERP Windows Installer
-
-```bash
-cd electron
-npm install
-npm run build:win
-cd ..
-```
-
-**Output:** `dist-electron/Legacy Business ERP Setup.exe`
-**Also produces:** `dist-electron/Legacy Business ERP Portable.exe`
-
----
-
-## Step 6 — Build the Owner App Windows Installer
-
-```bash
-cd electron-owner
-npm install
-npm run build:win
-cd ..
-```
-
-**Output:** `dist-electron-owner/Legacy Business Owner Setup.exe`
-**Also produces:** `dist-electron-owner/Legacy Business Owner Portable.exe`
+**Output:** `dist-electron-owner/Legacy Business Owner Setup.exe`  
+**Also:** `dist-electron-owner/Legacy Business Owner Portable.exe`
 
 ---
 
@@ -110,34 +94,68 @@ cd ..
 ```
 legacy-business/
 ├── dist-electron/
-│   ├── Legacy Business ERP Setup.exe        ← Customer installer
-│   └── Legacy Business ERP Portable.exe     ← Customer portable
+│   ├── Legacy Business ERP Setup.exe          ← Customer installer
+│   └── Legacy Business ERP Portable.exe       ← Customer portable
 └── dist-electron-owner/
-    ├── Legacy Business Owner Setup.exe      ← Owner installer
-    └── Legacy Business Owner Portable.exe  ← Owner portable
+    ├── Legacy Business Owner Setup.exe        ← Owner installer
+    └── Legacy Business Owner Portable.exe    ← Owner portable
 ```
 
 ---
 
-## Code Signing (Optional — reduces SmartScreen warnings)
+## Manual build (step by step)
 
-Without a code-signing certificate, Windows SmartScreen will show a warning
-the first time users run the installer. This is normal for unsigned apps.
+If the automated scripts fail, run each step manually in Git Bash:
 
-To add a certificate later:
+```bash
+# From repo root
+pnpm install --frozen-lockfile
 
-1. Purchase an EV or OV code-signing certificate from a trusted CA
-   (e.g. Sectigo, DigiCert, SSL.com).
-2. Add these to `electron/package.json` under `"win"`:
-   ```json
-   "certificateFile": "path/to/cert.pfx",
-   "certificatePassword": "YOUR_CERT_PASSWORD"
-   ```
-3. Do the same in `electron-owner/package.json`.
-4. Rebuild both installers.
+# Create firebase-service-account.json (if not already done)
+printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > firebase-service-account.json
 
-> **Do NOT bypass SmartScreen for users.** The proper solution is a valid
-> certificate. Until then, users can click "More info → Run anyway".
+# Build API server
+PORT=8080 BASE_PATH=/ pnpm --filter @workspace/api-server run build
+
+# Build frontend
+PORT=21973 BASE_PATH=/ pnpm --filter @workspace/legacy-business run build
+
+# Build Customer ERP installer
+cd electron
+npm install
+npx electron-builder --win --x64
+cd ..
+
+# Build Owner App installer
+cd electron-owner
+npm install
+npx electron-builder --win --x64
+cd ..
+```
+
+---
+
+## PostgreSQL setup on a fresh Windows machine
+
+The apps need PostgreSQL running locally. On a fresh install:
+
+1. Download PostgreSQL from https://www.postgresql.org/download/windows/
+2. During installation, set the `postgres` user password (default in the app: `postgres`)
+3. After installing, PostgreSQL starts automatically as a Windows service
+4. The app will auto-create the `legacy_erp` database on first launch
+
+---
+
+## Windows SmartScreen warning
+
+Unsigned EXE files show a SmartScreen warning on first run. Users click:
+**"More info" → "Run anyway"**
+
+This is normal for unsigned apps. To remove the warning, purchase a code-signing certificate and add it to `electron/package.json` and `electron-owner/package.json` under `"win"`:
+```json
+"certificateFile": "path/to/cert.pfx",
+"certificatePassword": "YOUR_CERT_PASSWORD"
+```
 
 ---
 
@@ -145,15 +163,17 @@ To add a certificate later:
 
 | Error | Fix |
 |-------|-----|
-| `firebase-service-account.json not found` | Create the file in repo root (Step 3) |
-| `Cannot find module '../dist/index.mjs'` | Run `pnpm run build:artifacts` first (Step 4) |
-| `Port already in use` | Close any running instance of the app |
-| `electron-builder: NSIS not found` | Run `npm install` inside `electron/` or `electron-owner/` |
-| Windows SmartScreen warning | Expected for unsigned apps — click "More info → Run anyway" |
+| `firebase-service-account.json not found` | Set `FIREBASE_SERVICE_ACCOUNT_JSON` env var or create the file manually |
+| `API server bundle not found` | Run `pnpm --filter @workspace/api-server run build` first |
+| `Frontend not found` | Run `PORT=21973 BASE_PATH=/ pnpm --filter @workspace/legacy-business run build` first |
+| PostgreSQL not running | Open services.msc → start `postgresql-x64-*` |
+| Login not working | Check PostgreSQL is running and DATABASE_URL is correct |
+| electron-builder NSIS error | Run `npm install` inside `electron/` or `electron-owner/` |
+| SmartScreen blocks EXE | Click "More info" → "Run anyway" (expected for unsigned apps) |
 
 ---
 
 ## Support
 
-Email: legacysolutions0001@gmail.com
+Email: legacysolutions0001@gmail.com  
 Phone: +91 7452888421
