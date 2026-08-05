@@ -3,7 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm, cp } from "node:fs/promises";
+import { rm, cp, writeFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -22,8 +23,30 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
+    // ─── External packages ────────────────────────────────────────────────────
+    // firebase-admin and its entire ecosystem (@google-cloud/firestore,
+    // @grpc/grpc-js, @grpc/proto-loader, protobufjs, google-auth-library,
+    // google-gax, @opentelemetry/api …) are kept EXTERNAL here.
+    //
+    // WHY NOT BUNDLED: @google-cloud/firestore emits top-level CJS require()
+    // calls for protobufjs, @grpc/grpc-js, @grpc/proto-loader, google-gax, etc.
+    // inside its compiled .js files. esbuild cannot statically resolve dynamic
+    // CJS require() calls — they pass through as external references in the
+    // bundle. Bundling firebase-admin while leaving protobufjs/grpc external
+    // produces a 6 MB dist/index.mjs that still crashes immediately in the
+    // packaged EXE with:
+    //
+    //   Error: Cannot find module 'protobufjs'
+    //   Require stack: - resources/api-server/dist/index.mjs
+    //
+    // FIX: keep the entire firebase ecosystem external, then install it as real
+    // node_modules inside dist/ (see bottom of this file). electron-builder's
+    // extraResources copies dist/** verbatim (filter: ["**/*"]), so the installed
+    // node_modules end up at resources/api-server/dist/node_modules/ inside the
+    // packaged EXE — the first path Node.js searches when resolving requires.
     external: [
       "*.node",
+      // ── Native / non-bundleable packages ─────────────────────────────────
       "sharp",
       "better-sqlite3",
       "sqlite3",
@@ -48,21 +71,13 @@ async function buildAll() {
       "handlebars",
       "knex",
       "typeorm",
-      "protobufjs",
       "onnxruntime-node",
       "@tensorflow/*",
       "@prisma/client",
       "@mikro-orm/*",
-      "@grpc/*",
       "@swc/*",
       "@aws-sdk/*",
       "@azure/*",
-      "@opentelemetry/*",
-      // NOTE: firebase-admin and @google-cloud/* are intentionally BUNDLED
-      // (not external) so the packaged Electron EXE can run the API server
-      // without needing a node_modules directory alongside the bundle.
-      // They are pure-JS packages with no native bindings.
-
       "@parcel/watcher",
       "@sentry/profiling-node",
       "@tree-sitter/*",
@@ -96,6 +111,20 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
+      // ── Firebase / Google Cloud ecosystem (installed into dist/node_modules/) ─
+      "firebase-admin",
+      "firebase-admin/*",
+      "@google-cloud/*",
+      "@google/*",
+      "googleapis",
+      "@grpc/*",
+      "protobufjs",
+      "protobufjs/*",
+      "google-auth-library",
+      "google-gax",
+      "google-gax/*",
+      "@opentelemetry/*",
+      "supports-color",
     ],
     sourcemap: "linked",
     plugins: [
@@ -115,24 +144,54 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     },
   });
 
-  // Copy migrations folder into dist so runMigrations() can find it at dist/migrations/
-  // migrate.ts resolves candidates as path.resolve(__currentDir, "./migrations") in production bundle
+  // ── Copy migrations ────────────────────────────────────────────────────────
+  // migrate.ts resolves candidates as path.resolve(__currentDir, "./migrations")
   const migrationsSource = path.resolve(artifactDir, "../../lib/db/migrations");
   const migrationsDest = path.resolve(distDir, "migrations");
   await cp(migrationsSource, migrationsDest, { recursive: true });
   console.log("✓ Migrations copied to dist/migrations/");
+
+  // ── Install firebase-admin ecosystem into dist/node_modules/ ──────────────
+  // The firebase-admin package tree uses dynamic CJS require() calls deep inside
+  // @google-cloud/firestore (protobufjs, @grpc/grpc-js, @grpc/proto-loader,
+  // google-gax, google-auth-library, @opentelemetry/api, supports-color) that
+  // esbuild cannot inline statically. We install them as real node_modules
+  // alongside the bundle so both `node dist/index.mjs` in development AND the
+  // packaged Electron EXE can resolve them at runtime.
+  //
+  // electron-builder extraResources already copies dist/** verbatim via
+  // filter: ["**/*"], so dist/node_modules/ will be present in the packaged EXE
+  // at resources/api-server/dist/node_modules/ — Node.js checks that path first.
+  const apiPkgJson = JSON.parse(
+    await import("node:fs").then((m) =>
+      m.promises.readFile(path.resolve(artifactDir, "package.json"), "utf8")
+    )
+  );
+  const firebaseVersion = apiPkgJson.dependencies["firebase-admin"] ?? "^14.2.0";
+
+  await writeFile(
+    path.join(distDir, "package.json"),
+    JSON.stringify(
+      {
+        name: "legacy-api-runtime",
+        version: "1.0.0",
+        private: true,
+        dependencies: { "firebase-admin": firebaseVersion },
+      },
+      null,
+      2
+    )
+  );
+
+  console.log(`Installing firebase-admin${firebaseVersion} + all transitive deps into dist/node_modules/ ...`);
+  execSync(
+    "npm install --production --ignore-scripts --no-audit --no-fund --loglevel=warn",
+    { cwd: distDir, stdio: "inherit" }
+  );
+  console.log("✓ firebase-admin runtime deps installed into dist/node_modules/");
 }
 
-async function copyMigrations() {
-  const { cpSync } = await import('node:fs');
-  const src = path.resolve(artifactDir, '../../lib/db/migrations');
-  const dest = path.resolve(artifactDir, 'dist/migrations');
-  cpSync(src, dest, { recursive: true });
-}
-
-buildAll()
-  .then(copyMigrations)
-  .catch((err) => {
+buildAll().catch((err) => {
   console.error(err);
   process.exit(1);
 });
