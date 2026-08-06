@@ -165,10 +165,6 @@ function createMainWindow() {
     }
     mainWindow.show();
     mainWindow.focus();
-    if (settings.firstLaunch) {
-      settings.firstLaunch = false;
-      saveSettings(settings);
-    }
   });
 
   mainWindow.on('close', (e) => {
@@ -218,6 +214,175 @@ function showApp() {
   }
 }
 
+// ─── PostgreSQL Auto-Detection and Setup ─────────────────────────────────────
+// Attempts to find and start an existing PostgreSQL installation automatically.
+// Returns the database URL to use.
+async function ensurePostgres() {
+  const { exec } = require('child_process');
+  const net = require('net');
+
+  // Helper: try to connect to postgres port
+  function canConnectToPg(port = 5432) {
+    return new Promise((resolve) => {
+      const sock = net.connect({ port, host: '127.0.0.1' }, () => {
+        sock.destroy();
+        resolve(true);
+      });
+      sock.on('error', () => resolve(false));
+      sock.setTimeout(2000, () => { sock.destroy(); resolve(false); });
+    });
+  }
+
+  // Check if PostgreSQL is already accepting connections
+  const isRunning = await canConnectToPg(5432);
+  if (isRunning) {
+    logElectron('✓ PostgreSQL is already running on port 5432');
+    return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+  }
+
+  logElectron('PostgreSQL not running — attempting to start service automatically...');
+
+  // Windows: try to start postgresql service via sc / net start
+  if (process.platform === 'win32') {
+    // Find the service name by scanning common patterns
+    const serviceNames = [
+      'postgresql-x64-17', 'postgresql-x64-16', 'postgresql-x64-15',
+      'postgresql-x64-14', 'postgresql-x64-13', 'postgresql-x64-12',
+      'postgresql', 'PostgreSQL',
+    ];
+
+    for (const svc of serviceNames) {
+      const started = await new Promise((resolve) => {
+        exec(`net start "${svc}"`, (err, stdout, stderr) => {
+          if (!err) {
+            logElectron(`✓ Started PostgreSQL service: ${svc}`);
+            resolve(true);
+          } else if ((stdout + stderr).includes('already been started') || (stdout + stderr).includes('is already running')) {
+            logElectron(`✓ PostgreSQL service already running: ${svc}`);
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+      });
+      if (started) {
+        // Wait a moment for the service to fully start
+        await new Promise(r => setTimeout(r, 3000));
+        const nowRunning = await canConnectToPg(5432);
+        if (nowRunning) {
+          logElectron('✓ PostgreSQL is now running');
+          return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+        }
+      }
+    }
+
+    // PostgreSQL service not found — try pg_ctl from common install paths
+    const pgCtlPaths = [
+      'C:\\Program Files\\PostgreSQL\\17\\bin\\pg_ctl.exe',
+      'C:\\Program Files\\PostgreSQL\\16\\bin\\pg_ctl.exe',
+      'C:\\Program Files\\PostgreSQL\\15\\bin\\pg_ctl.exe',
+      'C:\\Program Files\\PostgreSQL\\14\\bin\\pg_ctl.exe',
+      'C:\\Program Files\\PostgreSQL\\13\\bin\\pg_ctl.exe',
+    ];
+
+    for (const pgCtl of pgCtlPaths) {
+      if (fs.existsSync(pgCtl)) {
+        const dataDir = path.join(path.dirname(pgCtl), '..', 'data');
+        logElectron(`Found pg_ctl at ${pgCtl} — attempting to start...`);
+        const started = await new Promise((resolve) => {
+          exec(`"${pgCtl}" start -D "${dataDir}"`, (err) => resolve(!err));
+        });
+        if (started) {
+          await new Promise(r => setTimeout(r, 3000));
+          const nowRunning = await canConnectToPg(5432);
+          if (nowRunning) {
+            logElectron('✓ PostgreSQL started via pg_ctl');
+            return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+          }
+        }
+      }
+    }
+
+    // Not installed — show user-friendly dialog
+    const result = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'PostgreSQL Required',
+      message: 'PostgreSQL is not installed or not running.',
+      detail: [
+        'Legacy Business ERP requires PostgreSQL to store your data.',
+        '',
+        'Please install PostgreSQL:',
+        '  1. Download from: https://www.postgresql.org/download/windows/',
+        '  2. During installation, set password to "postgres"',
+        '  3. Keep the default port 5432',
+        '  4. Restart Legacy Business ERP after installation',
+        '',
+        'Or if already installed, start the PostgreSQL service:',
+        '  Press Win+R → type "services.msc" → find PostgreSQL → click Start',
+      ].join('\n'),
+      buttons: ['Download PostgreSQL', 'Retry', 'Quit'],
+      defaultId: 1,
+    });
+
+    if (result.response === 0) {
+      const { shell } = require('electron');
+      shell.openExternal('https://www.postgresql.org/download/windows/');
+    }
+    if (result.response === 2) {
+      app.quit();
+      return null;
+    }
+    // Retry — check again
+    const nowRunning = await canConnectToPg(5432);
+    if (nowRunning) {
+      return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+    }
+    throw new Error('PostgreSQL is not running. Please install and start PostgreSQL, then restart the application.');
+  }
+
+  // Non-Windows (Linux/macOS): try systemctl / brew services
+  const linuxStarted = await new Promise((resolve) => {
+    exec('systemctl start postgresql 2>/dev/null || service postgresql start 2>/dev/null || brew services start postgresql 2>/dev/null', (err) => {
+      resolve(!err);
+    });
+  });
+  if (linuxStarted) {
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+}
+
+// ─── Ensure Database and Tables Exist ────────────────────────────────────────
+async function ensureDatabase(databaseUrl) {
+  const { Client } = (() => { try { return require('pg'); } catch { return { Client: null }; } })();
+  if (!Client) {
+    logElectron('pg module not available — skipping database creation step');
+    return;
+  }
+
+  // Parse the DB URL to get the base (postgres) connection
+  let baseUrl = databaseUrl.replace(/\/legacy_erp(\?.*)?$/, '/postgres');
+  const dbName = 'legacy_erp';
+
+  logElectron(`Checking if database '${dbName}' exists...`);
+  const client = new Client({ connectionString: baseUrl, connectionTimeoutMillis: 5000 });
+  try {
+    await client.connect();
+    const result = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [dbName]);
+    if (result.rowCount === 0) {
+      logElectron(`Database '${dbName}' does not exist — creating...`);
+      await client.query(`CREATE DATABASE legacy_erp`);
+      logElectron(`✓ Database '${dbName}' created`);
+    } else {
+      logElectron(`✓ Database '${dbName}' already exists`);
+    }
+  } catch (e) {
+    logElectron(`Database check/creation warning: ${e.message}`);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 // ─── Backend (Express API) ────────────────────────────────────────────────────
 async function startBackend() {
   apiPort = await findFreePort(8080);
@@ -231,10 +396,11 @@ async function startBackend() {
     }
   }
 
-  const databaseUrl =
-    settings.databaseUrl ||
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+  // Auto-detect and start PostgreSQL if needed
+  const databaseUrl = await ensurePostgres();
+  if (!databaseUrl) return; // User chose to quit
+  // Auto-create the legacy_erp database if it doesn't exist
+  await ensureDatabase(databaseUrl);
 
   const env = {
     ...process.env,
@@ -254,7 +420,7 @@ async function startBackend() {
     FIREBASE_SERVICE_ACCOUNT_JSON: firebaseSaJson,
     FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'legacy-business-erp',
     FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || 'legacy-business-erp.firebasestorage.app',
-    SUPER_ADMIN_USERNAME: process.env.SUPER_ADMIN_USERNAME || 'bhullar01',
+    SUPER_ADMIN_USERNAME: process.env.SUPER_ADMIN_USERNAME || settings.superAdminUsername || 'bhullar_01',
     SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD || settings.superAdminPassword || 'Bhullar_01',
     BACKUP_DIR: settings.backupFolder || BACKUP_DIR_DEFAULT,
     MIGRATIONS_DIR: MIGRATIONS,
@@ -521,6 +687,47 @@ if (!gotLock) {
     logElectron(`FRONTEND exists: ${fs.existsSync(FRONTEND)}`);
 
     nativeTheme.themeSource = settings.theme || 'dark';
+
+    // ── First launch: ask where to store daily backups ──────────────────────
+    if (settings.firstLaunch) {
+      const backupResult = await dialog.showMessageBox({
+        type: 'question',
+        title: 'Legacy Business ERP — First Launch Setup',
+        message: 'Where do you want to store daily backups?',
+        detail: [
+          'Legacy Business ERP creates automatic encrypted daily backups of all your data.',
+          '',
+          'Please choose a backup folder location.',
+          'Recommended: Choose a separate drive or a folder that is regularly synced (e.g. OneDrive, Google Drive).',
+          '',
+          'Default: ' + BACKUP_DIR_DEFAULT,
+        ].join('\n'),
+        buttons: ['Choose Folder', 'Use Default Location'],
+        defaultId: 1,
+      });
+
+      let backupFolder = BACKUP_DIR_DEFAULT;
+      if (backupResult.response === 0) {
+        // Show folder picker
+        const folderResult = await dialog.showOpenDialog({
+          properties: ['openDirectory', 'createDirectory'],
+          title: 'Select Backup Folder',
+          defaultPath: app.getPath('documents'),
+          buttonLabel: 'Use This Folder for Backups',
+        });
+        if (!folderResult.canceled && folderResult.filePaths.length > 0) {
+          backupFolder = folderResult.filePaths[0];
+        }
+      }
+
+      settings.backupFolder = backupFolder;
+      settings.firstLaunch = false;
+      saveSettings(settings);
+      logElectron(`✓ Backup folder set to: ${backupFolder}`);
+
+      // Ensure the backup folder exists
+      try { fs.mkdirSync(backupFolder, { recursive: true }); } catch {}
+    }
 
     createSplash();
 

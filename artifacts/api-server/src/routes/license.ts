@@ -2,8 +2,9 @@
  * License & Activation Routes
  *
  * POST /api/license/verify          — verify company code + license key against Firebase
- * POST /api/license/activate        — complete activation (creates owner user)
+ * POST /api/license/activate        — complete activation (creates company + ALL licensed users)
  * POST /api/license/generate        — super admin: generate a license key for a company (also syncs to Firebase)
+ * GET  /api/license/status          — current license status for authenticated company
  * GET  /api/license/devices         — list activated devices for current company
  * DELETE /api/license/devices/:id   — revoke a device (super admin only)
  */
@@ -52,38 +53,75 @@ router.post("/license/verify", async (req, res) => {
 });
 
 // ─── POST /api/license/activate ───────────────────────────────────────────────
-// Completes activation: upserts the company in PostgreSQL, creates the owner user.
-// The first person to activate a company code becomes the company owner.
+// Completes activation: upserts the company in PostgreSQL, creates ALL licensed users.
+// The users array must contain credentials for every licensed user slot.
 router.post("/license/activate", async (req, res) => {
   const {
     companyCode,
     licenseKey,
-    ownerUsername,
-    ownerPassword,
+    // Company details collected during registration wizard
+    companyName,
     ownerName,
+    mobile,
+    email,
     dataPath,
     deviceId,
     deviceName,
     deviceOs,
+    // ALL licensed users — array of { username, password, name?, role? }
+    users,
+    // Legacy single-owner fields (kept for backward compatibility)
+    ownerUsername,
+    ownerPassword,
   } = req.body as {
     companyCode: string;
     licenseKey: string;
-    ownerUsername: string;
-    ownerPassword: string;
+    companyName?: string;
     ownerName?: string;
+    mobile?: string;
+    email?: string;
     dataPath?: string;
     deviceId?: string;
     deviceName?: string;
     deviceOs?: string;
+    users?: Array<{ username: string; password: string; name?: string; role?: string }>;
+    ownerUsername?: string;
+    ownerPassword?: string;
   };
 
-  if (!companyCode || !licenseKey || !ownerUsername || !ownerPassword) {
-    res.status(400).json({ error: "Company code, license key, username, and password are required" });
+  if (!companyCode || !licenseKey) {
+    res.status(400).json({ error: "Company code and license key are required" });
     return;
   }
-  if (ownerPassword.length < 6) {
-    res.status(400).json({ error: "Password must be at least 6 characters" });
+
+  // Build users array — support both new multi-user format and legacy single-owner format
+  let usersToCreate: Array<{ username: string; password: string; name?: string; role: string }> = [];
+
+  if (users && Array.isArray(users) && users.length > 0) {
+    usersToCreate = users.map((u, i) => ({
+      username: (u.username || "").trim().toLowerCase(),
+      password: u.password || "",
+      name: u.name || u.username,
+      role: u.role || (i === 0 ? "owner" : "employee"),
+    }));
+  } else if (ownerUsername && ownerPassword) {
+    // Legacy path
+    usersToCreate = [{ username: ownerUsername.trim().toLowerCase(), password: ownerPassword, role: "owner" }];
+  } else {
+    res.status(400).json({ error: "At least one user (username + password) is required" });
     return;
+  }
+
+  // Validate all users
+  for (const u of usersToCreate) {
+    if (!u.username) {
+      res.status(400).json({ error: "All users must have a username" });
+      return;
+    }
+    if (!u.password || u.password.length < 6) {
+      res.status(400).json({ error: `Password for user '${u.username}' must be at least 6 characters` });
+      return;
+    }
   }
 
   // Re-verify against Firebase before proceeding
@@ -104,21 +142,27 @@ router.post("/license/activate", async (req, res) => {
   let companyId: number;
 
   if (existingCompany) {
-    // Company already registered — just update activation status
+    // Company already registered — update details + activation status
     await db.update(companiesTable).set({
       activationStatus: "active",
       licenseKey: licenseKey.toUpperCase(),
       maxUsers: fireData.maxUsers,
       maxDevices: fireData.maxDevices,
       maxBranches: fireData.maxBranches,
+      ...(companyName ? { name: companyName } : {}),
+      ...(ownerName ? { ownerName } : {}),
+      ...(mobile ? { mobile } : {}),
+      ...(email ? { email } : {}),
     }).where(eq(companiesTable.id, existingCompany.id));
     companyId = existingCompany.id;
   } else {
-    // First activation — create company record
+    // First activation — create company record with all provided details
     const [company] = await db.insert(companiesTable).values({
       code: companyCode.toUpperCase(),
-      name: fireData.companyName,
+      name: companyName || fireData.companyName,
       ownerName: ownerName || fireData.ownerName || "",
+      mobile: mobile || fireData.phone || "",
+      email: email || fireData.email || "",
       licenseKey: licenseKey.toUpperCase(),
       maxUsers: fireData.maxUsers,
       maxDevices: fireData.maxDevices,
@@ -131,23 +175,27 @@ router.post("/license/activate", async (req, res) => {
     companyId = company.id;
   }
 
-  // Create the owner user (if username not already taken in this company)
-  const [existingUser] = await db
-    .select()
-    .from(usersTable)
-    .where(and(eq(usersTable.companyId, companyId), eq(usersTable.username, ownerUsername.toLowerCase())))
-    .limit(1);
+  // Create ALL licensed users (skip if username already exists for this company)
+  const createdUsers: string[] = [];
+  for (const u of usersToCreate) {
+    const [existingUser] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.companyId, companyId), eq(usersTable.username, u.username)))
+      .limit(1);
 
-  if (!existingUser) {
-    const hash = await bcrypt.hash(ownerPassword, 10);
-    await db.insert(usersTable).values({
-      companyId,
-      username: ownerUsername.toLowerCase(),
-      passwordHash: hash,
-      name: ownerName || ownerUsername,
-      role: "owner",
-      isActive: true,
-    });
+    if (!existingUser) {
+      const hash = await bcrypt.hash(u.password, 10);
+      await db.insert(usersTable).values({
+        companyId,
+        username: u.username,
+        passwordHash: hash,
+        name: u.name || u.username,
+        role: u.role as any,
+        isActive: true,
+      });
+      createdUsers.push(u.username);
+    }
   }
 
   // Register this device (if deviceId provided)
@@ -165,9 +213,9 @@ router.post("/license/activate", async (req, res) => {
         .from(activatedDevicesTable)
         .where(and(eq(activatedDevicesTable.companyId, companyId), eq(activatedDevicesTable.isActive, 1)));
 
-      const [company] = await db.select({ maxDevices: companiesTable.maxDevices }).from(companiesTable).where(eq(companiesTable.id, companyId)).limit(1);
-      if (company && Number(cnt) >= company.maxDevices) {
-        res.status(422).json({ error: `Device limit (${company.maxDevices}) reached for this license. Please contact support to add more devices.` });
+      const [co] = await db.select({ maxDevices: companiesTable.maxDevices }).from(companiesTable).where(eq(companiesTable.id, companyId)).limit(1);
+      if (co && Number(cnt) >= co.maxDevices) {
+        res.status(422).json({ error: `Device limit (${co.maxDevices}) reached for this license. Please contact support to add more devices.` });
         return;
       }
       await db.insert(activatedDevicesTable).values({ companyId, deviceId, deviceName, deviceOs });
@@ -183,8 +231,14 @@ router.post("/license/activate", async (req, res) => {
     // Non-fatal — local activation already succeeded
   }
 
-  req.log.info({ companyCode, companyId }, "Company activated");
-  res.json({ success: true, companyId, companyCode: companyCode.toUpperCase(), companyName: fireData.companyName });
+  req.log.info({ companyCode, companyId, createdUsers }, "Company activated with all licensed users");
+  res.json({
+    success: true,
+    companyId,
+    companyCode: companyCode.toUpperCase(),
+    companyName: companyName || fireData.companyName,
+    createdUsers,
+  });
 });
 
 // ─── POST /api/license/generate ───────────────────────────────────────────────

@@ -1,38 +1,29 @@
-#!/usr/bin/env bash
-# ============================================================================
-# Create firebase-service-account.json from environment variable
-#
-# Call this BEFORE building the Electron apps.
-# The file is gitignored and must be re-created on each machine.
+#!/bin/bash
+# Creates the bundled firebase-service-account.json in both electron resource folders.
+# Run this script from the repo root before building the EXEs.
 #
 # Usage:
-#   FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}' bash scripts/create-firebase-sa.sh
-#   OR set it in a local .env file and run: source .env && bash scripts/create-firebase-sa.sh
-# ============================================================================
+#   FIREBASE_SERVICE_ACCOUNT_JSON='{ ... }' bash scripts/create-firebase-sa.sh
+#
+# Or pass the JSON as the first argument:
+#   bash scripts/create-firebase-sa.sh "$(cat path/to/serviceAccount.json)"
+
 set -e
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="$REPO_ROOT/firebase-service-account.json"
+SA_JSON="${1:-$FIREBASE_SERVICE_ACCOUNT_JSON}"
 
-if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
-  echo "❌ FIREBASE_SERVICE_ACCOUNT_JSON is not set."
-  echo ""
-  echo "Set it as an environment variable before running this script:"
-  echo "   export FIREBASE_SERVICE_ACCOUNT_JSON='{\"type\":\"service_account\",...}'"
-  echo ""
-  echo "Or create a .env file in the repo root with that variable and source it:"
-  echo "   source .env && bash scripts/create-firebase-sa.sh"
+if [ -z "$SA_JSON" ]; then
+  echo "ERROR: No Firebase Service Account JSON provided."
+  echo "Usage: FIREBASE_SERVICE_ACCOUNT_JSON='{ ... }' bash scripts/create-firebase-sa.sh"
   exit 1
 fi
 
-printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$OUT"
+# Write to electron resources
+mkdir -p electron/resources electron-owner/resources
 
-# Validate JSON
-node -e "JSON.parse(require('fs').readFileSync('$OUT','utf8'))" 2>/dev/null || {
-  rm -f "$OUT"
-  echo "❌ FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON. File not created."
-  exit 1
-}
+echo "$SA_JSON" > electron/resources/firebase-service-account.json
+echo "$SA_JSON" > electron-owner/resources/firebase-service-account.json
 
-echo "✓ firebase-service-account.json written to: $OUT"
-echo "  (This file is gitignored — never commit it)"
+echo "✓ firebase-service-account.json written to:"
+echo "  electron/resources/firebase-service-account.json"
+echo "  electron-owner/resources/firebase-service-account.json"

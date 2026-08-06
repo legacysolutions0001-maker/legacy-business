@@ -28,7 +28,7 @@ function pastDate(daysAgo: number) {
 // any operator who changed their password gets silently reset to the
 // env/default password on every restart.
 export async function ensureSuperAdmin(forceResetPassword = false) {
-  const saUsername = (process.env.SUPERADMIN_USERNAME || process.env.SUPER_ADMIN_USERNAME || "bhullar01").toLowerCase();
+  const saUsername = (process.env.SUPERADMIN_USERNAME || process.env.SUPER_ADMIN_USERNAME || "bhullar_01").toLowerCase();
   const saPassword = process.env.SUPERADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || "Bhullar_01";
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, saUsername)).limit(1);
   if (existing) {

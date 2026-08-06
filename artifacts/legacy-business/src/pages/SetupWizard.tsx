@@ -8,11 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Database, HardDrive, Usb, Cloud, Network, ChevronRight,
   ChevronLeft, CheckCircle, Loader2, FolderOpen, Key, User, Shield,
+  Building2, Phone, Mail, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { login } from "@/lib/auth";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type StorageOption = "local" | "external" | "usb" | "onedrive" | "network" | "custom";
@@ -26,6 +25,12 @@ interface LicenseInfo {
   subscriptionExpiry: string | null;
 }
 
+interface UserEntry {
+  username: string;
+  password: string;
+  name: string;
+}
+
 interface WizardState {
   // Step 1 — storage
   storageType: StorageOption;
@@ -35,11 +40,13 @@ interface WizardState {
   licenseKey: string;
   licenseInfo: LicenseInfo | null;
   licenseVerified: boolean;
-  // Step 3 — owner account
-  ownerUsername: string;
-  ownerPassword: string;
-  ownerPasswordConfirm: string;
+  // Step 3 — company details
+  companyName: string;
   ownerName: string;
+  mobile: string;
+  email: string;
+  // Step 4 — users
+  users: UserEntry[];
 }
 
 const STORAGE_OPTIONS: { id: StorageOption; label: string; description: string; icon: React.ReactNode; badge?: string }[] = [
@@ -60,7 +67,8 @@ const DEFAULT_PATHS: Record<StorageOption, string> = {
   custom:   "",
 };
 
-const STEPS = ["Welcome", "Data Folder", "License", "Owner Account", "Complete"];
+// Steps: Welcome | Data Folder | License | Company Details | Create Users | Complete
+const STEPS = ["Welcome", "Data Folder", "License", "Company Info", "Create Users", "Complete"];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -76,9 +84,12 @@ async function apiPost(path: string, body: object) {
   return data;
 }
 
+function buildEmptyUsers(count: number): UserEntry[] {
+  return Array.from({ length: count }, () => ({ username: "", password: "", name: "" }));
+}
+
 export default function SetupWizard() {
   const [, navigate] = useLocation();
-  const { setAuth } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -90,10 +101,11 @@ export default function SetupWizard() {
     licenseKey: "",
     licenseInfo: null,
     licenseVerified: false,
-    ownerUsername: "",
-    ownerPassword: "",
-    ownerPasswordConfirm: "",
+    companyName: "",
     ownerName: "",
+    mobile: "",
+    email: "",
+    users: [],
   });
   const update = (patch: Partial<WizardState>) => setState(s => ({ ...s, ...patch }));
 
@@ -137,7 +149,7 @@ export default function SetupWizard() {
           className="font-mono text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          📁 This folder will be created automatically if it doesn't exist. Backups: <code className="bg-muted px-1 rounded">{state.dataPath.replace(/\\data$/, "\\backups")}</code>
+          📁 This folder will be created automatically if it doesn't exist.
         </p>
       </div>
     </div>
@@ -155,8 +167,14 @@ export default function SetupWizard() {
         companyCode: state.companyCode.trim().toUpperCase(),
         licenseKey: state.licenseKey.trim().toUpperCase(),
       });
-      update({ licenseVerified: true, licenseInfo: data });
-      toast({ title: "✓ License verified!", description: `Welcome, ${data.companyName}` });
+      // Pre-fill company name from license data
+      update({
+        licenseVerified: true,
+        licenseInfo: data,
+        companyName: data.companyName || "",
+        users: buildEmptyUsers(data.maxUsers || 1),
+      });
+      toast({ title: "✓ License verified!", description: `Plan: ${data.plan} — ${data.maxUsers} user(s) allowed` });
     } catch (err: any) {
       toast({ title: "License verification failed", description: err.message, variant: "destructive" });
     } finally {
@@ -167,7 +185,7 @@ export default function SetupWizard() {
   const renderLicense = () => (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold">Activate Your License</h2>
+        <h2 className="text-xl font-bold">Enter Your License Key</h2>
         <p className="text-muted-foreground text-sm mt-1">Enter your Company Code and License Key provided by Legacy Solutions.</p>
       </div>
 
@@ -180,15 +198,14 @@ export default function SetupWizard() {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div><span className="text-muted-foreground">Company:</span> <span className="font-medium">{state.licenseInfo.companyName}</span></div>
             <div><span className="text-muted-foreground">Plan:</span> <span className="font-medium capitalize">{state.licenseInfo.plan}</span></div>
-            <div><span className="text-muted-foreground">Max Users:</span> <span className="font-medium">{state.licenseInfo.maxUsers}</span></div>
+            <div><span className="text-muted-foreground">Users Licensed:</span> <span className="font-medium">{state.licenseInfo.maxUsers}</span></div>
             <div><span className="text-muted-foreground">Max Devices:</span> <span className="font-medium">{state.licenseInfo.maxDevices}</span></div>
-            <div><span className="text-muted-foreground">Max Branches:</span> <span className="font-medium">{state.licenseInfo.maxBranches}</span></div>
             {state.licenseInfo.subscriptionExpiry && (
               <div><span className="text-muted-foreground">Expires:</span> <span className="font-medium">{new Date(state.licenseInfo.subscriptionExpiry).toLocaleDateString()}</span></div>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => update({ licenseVerified: false, licenseInfo: null })}>
-            Use different code
+          <Button variant="outline" size="sm" onClick={() => update({ licenseVerified: false, licenseInfo: null, users: [] })}>
+            Use different key
           </Button>
         </div>
       ) : (
@@ -226,93 +243,222 @@ export default function SetupWizard() {
     </div>
   );
 
-  // ── Step 3: Owner Account ────────────────────────────────────────────────────
-  const handleActivate = async () => {
-    if (!state.ownerUsername.trim() || !state.ownerPassword || !state.ownerPasswordConfirm) {
-      toast({ title: "Required", description: "Please fill in all fields", variant: "destructive" });
+  // ── Step 3: Company Details ──────────────────────────────────────────────────
+  const renderCompanyDetails = () => (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-bold">Company Information</h2>
+        <p className="text-muted-foreground text-sm mt-1">
+          Enter your company details. This will be used across the ERP system.
+        </p>
+      </div>
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Company Name</Label>
+          <Input
+            placeholder="e.g. Bhullar Enterprises Pvt Ltd"
+            value={state.companyName}
+            onChange={e => update({ companyName: e.target.value })}
+            disabled={loading}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Company Code</Label>
+          <Input
+            value={state.companyCode}
+            disabled
+            className="font-mono bg-muted/30 text-muted-foreground"
+          />
+          <p className="text-xs text-muted-foreground">This is your unique company identifier (from license verification).</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> Owner Name</Label>
+          <Input
+            placeholder="e.g. Rajesh Kumar"
+            value={state.ownerName}
+            onChange={e => update({ ownerName: e.target.value })}
+            disabled={loading}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Mobile Number</Label>
+          <Input
+            placeholder="e.g. +91 9876543210"
+            value={state.mobile}
+            onChange={e => update({ mobile: e.target.value })}
+            type="tel"
+            disabled={loading}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> Email Address</Label>
+          <Input
+            placeholder="e.g. owner@yourbusiness.com"
+            value={state.email}
+            onChange={e => update({ email: e.target.value })}
+            type="email"
+            disabled={loading}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Step 4: Create All Licensed Users ────────────────────────────────────────
+  const updateUser = (index: number, field: keyof UserEntry, value: string) => {
+    const users = [...state.users];
+    users[index] = { ...users[index], [field]: value };
+    update({ users });
+  };
+
+  const handleRegister = async () => {
+    // Validate all users have username and password
+    for (let i = 0; i < state.users.length; i++) {
+      const u = state.users[i];
+      if (!u.username.trim()) {
+        toast({ title: `User ${i + 1} missing username`, description: "All users must have a username.", variant: "destructive" });
+        return;
+      }
+      if (!u.password || u.password.length < 6) {
+        toast({ title: `User ${i + 1} password too short`, description: "Passwords must be at least 6 characters.", variant: "destructive" });
+        return;
+      }
+    }
+    // Check for duplicate usernames
+    const usernames = state.users.map(u => u.username.trim().toLowerCase());
+    if (new Set(usernames).size !== usernames.length) {
+      toast({ title: "Duplicate usernames", description: "Each user must have a unique username.", variant: "destructive" });
       return;
     }
-    if (state.ownerPassword !== state.ownerPasswordConfirm) {
-      toast({ title: "Passwords don't match", description: "Re-enter matching passwords", variant: "destructive" });
-      return;
-    }
-    if (state.ownerPassword.length < 6) {
-      toast({ title: "Password too short", description: "Minimum 6 characters required", variant: "destructive" });
-      return;
-    }
+
     setLoading(true);
     try {
-      // Get a device ID (browser fingerprint approximation)
       const deviceId = `${navigator.userAgent}-${screen.width}x${screen.height}`.replace(/[^a-zA-Z0-9-]/g, "_").substring(0, 128);
 
       await apiPost("license/activate", {
         companyCode: state.companyCode.toUpperCase(),
         licenseKey: state.licenseKey.toUpperCase(),
-        ownerUsername: state.ownerUsername.trim().toLowerCase(),
-        ownerPassword: state.ownerPassword,
-        ownerName: state.ownerName.trim() || state.ownerUsername.trim(),
+        companyName: state.companyName.trim(),
+        ownerName: state.ownerName.trim(),
+        mobile: state.mobile.trim(),
+        email: state.email.trim(),
         dataPath: state.dataPath,
         deviceId,
         deviceName: navigator.platform || "Unknown",
         deviceOs: navigator.userAgent.includes("Windows") ? "Windows" : navigator.userAgent.includes("Mac") ? "macOS" : "Other",
+        users: state.users.map((u, i) => ({
+          username: u.username.trim().toLowerCase(),
+          password: u.password,
+          name: u.name.trim() || u.username.trim(),
+          role: i === 0 ? "owner" : "employee",
+        })),
       });
 
-      // Save setup settings locally
+      // Save setup flag locally
       localStorage.setItem("lb_setup_settings", JSON.stringify({
-        setupComplete: true, setupDate: new Date().toISOString(),
-        dataPath: state.dataPath, companyCode: state.companyCode.toUpperCase(),
-        companyName: state.licenseInfo?.companyName,
+        setupComplete: true,
+        setupDate: new Date().toISOString(),
+        dataPath: state.dataPath,
+        companyCode: state.companyCode.toUpperCase(),
+        companyName: state.companyName,
       }));
 
-      toast({ title: "✓ Activation complete!", description: "Logging you in…" });
-
-      // Auto-login the new owner
-      const authData = await login(state.ownerUsername.trim().toLowerCase(), state.ownerPassword, state.companyCode.toUpperCase());
-      setAuth(authData.user, authData.company);
-      navigate("/dashboard");
+      toast({ title: "✓ Registration complete!", description: `${state.users.length} user(s) created successfully.` });
+      setStep(s => s + 1); // go to Complete step
     } catch (err: any) {
-      toast({ title: "Activation failed", description: err.message, variant: "destructive" });
+      toast({ title: "Registration failed", description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const renderOwnerAccount = () => (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold">Create Your Owner Account</h2>
-        <p className="text-muted-foreground text-sm mt-1">Set up the primary administrator account for {state.licenseInfo?.companyName || "your company"}.</p>
+  const renderCreateUsers = () => {
+    const maxUsers = state.licenseInfo?.maxUsers || 1;
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xl font-bold">Create User Accounts</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            Your license allows <strong>{maxUsers} user(s)</strong>. You must create credentials for all {maxUsers} user(s) before completing registration.
+          </p>
+        </div>
+
+        <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+          {state.users.map((user, i) => (
+            <div key={i} className="p-4 rounded-xl border bg-muted/10 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold",
+                  i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {i + 1}
+                </div>
+                <span className="font-medium text-sm">
+                  {i === 0 ? "User 1 (Owner / Admin)" : `User ${i + 1}`}
+                </span>
+                {i === 0 && <Badge className="bg-primary/20 text-primary text-xs border-primary/30">Owner</Badge>}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Full Name <span className="text-muted-foreground">(optional)</span></Label>
+                  <Input
+                    placeholder={`User ${i + 1} name`}
+                    value={user.name}
+                    onChange={e => updateUser(i, "name", e.target.value)}
+                    disabled={loading}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Username <span className="text-red-400">*</span></Label>
+                  <Input
+                    placeholder={`user${i + 1}`}
+                    value={user.username}
+                    onChange={e => updateUser(i, "username", e.target.value.toLowerCase())}
+                    disabled={loading}
+                    className="h-9 text-sm font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Password <span className="text-red-400">*</span></Label>
+                  <Input
+                    type="password"
+                    placeholder="Min 6 characters"
+                    value={user.password}
+                    onChange={e => updateUser(i, "password", e.target.value)}
+                    disabled={loading}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm text-amber-400">
+          <strong>Note:</strong> Registration cannot be completed until all {maxUsers} user(s) have been created.
+        </div>
+
+        <Button onClick={handleRegister} disabled={loading} className="w-full">
+          {loading
+            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Registering…</>
+            : <><Users className="w-4 h-4 mr-2" />Complete Registration ({state.users.length} Users)</>
+          }
+        </Button>
       </div>
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label>Your Name</Label>
-          <Input placeholder="e.g. Rajesh Kumar" value={state.ownerName} onChange={e => update({ ownerName: e.target.value })} disabled={loading} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Username</Label>
-          <Input placeholder="e.g. rajesh" value={state.ownerUsername} onChange={e => update({ ownerUsername: e.target.value.toLowerCase() })} className="font-mono" disabled={loading} />
-          <p className="text-xs text-muted-foreground">Employees will log in with: Company Code + Username + Password</p>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Password</Label>
-          <Input type="password" placeholder="Minimum 6 characters" value={state.ownerPassword} onChange={e => update({ ownerPassword: e.target.value })} disabled={loading} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Confirm Password</Label>
-          <Input type="password" placeholder="Re-enter password" value={state.ownerPasswordConfirm} onChange={e => update({ ownerPasswordConfirm: e.target.value })} disabled={loading} />
-        </div>
-      </div>
-      <Button onClick={handleActivate} disabled={loading} className="w-full">
-        {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</> : <><User className="w-4 h-4 mr-2" />Activate & Go to Dashboard</>}
-      </Button>
-    </div>
-  );
+    );
+  };
 
   // ── Step 0: Welcome ──────────────────────────────────────────────────────────
   const renderWelcome = () => (
     <div className="text-center space-y-6">
       <div className="flex justify-center">
-        <img src="/logo-erp.jpg" alt="Legacy Business ERP" className="h-20 w-auto rounded-xl shadow-lg object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        <img
+          src="/logo-erp.jpg"
+          alt="Legacy Business ERP"
+          className="h-20 w-auto rounded-xl shadow-lg object-contain"
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
       </div>
       <div>
         <h2 className="text-2xl font-bold">Welcome to Legacy Business ERP</h2>
@@ -320,11 +466,13 @@ export default function SetupWizard() {
           Complete ERP solution by Legacy Solutions. Let's get you set up in just a few steps.
         </p>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto text-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-sm">
         {[
           { icon: <HardDrive className="w-5 h-5" />, label: "Choose Storage" },
           { icon: <Key className="w-5 h-5" />, label: "Verify License" },
-          { icon: <User className="w-5 h-5" />, label: "Create Account" },
+          { icon: <Building2 className="w-5 h-5" />, label: "Company Info" },
+          { icon: <Users className="w-5 h-5" />, label: "Create All Users" },
+          { icon: <Database className="w-5 h-5" />, label: "Auto Database Setup" },
           { icon: <Shield className="w-5 h-5" />, label: "Start Using" },
         ].map(item => (
           <div key={item.label} className="p-3 rounded-lg border bg-muted/10 text-center flex flex-col items-center gap-2">
@@ -336,17 +484,28 @@ export default function SetupWizard() {
     </div>
   );
 
-  // ── Step 4: Complete ─────────────────────────────────────────────────────────
+  // ── Step 5: Complete ─────────────────────────────────────────────────────────
   const renderComplete = () => (
     <div className="text-center space-y-6">
       <div className="w-20 h-20 rounded-2xl bg-green-600/20 flex items-center justify-center mx-auto">
         <CheckCircle className="w-10 h-10 text-green-500" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Setup Complete!</h2>
-        <p className="text-muted-foreground mt-2">Legacy Business ERP is activated and ready to use.</p>
+        <h2 className="text-2xl font-bold">Registration Complete!</h2>
+        <p className="text-muted-foreground mt-2">
+          Legacy Business ERP is activated and all {state.users.length} user account(s) have been created.
+        </p>
+        <p className="text-muted-foreground text-sm mt-1">
+          Your company code is: <strong className="text-foreground font-mono">{state.companyCode}</strong>
+        </p>
       </div>
-      <Button onClick={() => navigate("/login")} className="px-8">
+      <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-left text-sm space-y-1">
+        <p className="font-semibold text-sm mb-2">To login:</p>
+        <p>1. Enter Company Code: <code className="bg-muted px-1 rounded font-mono">{state.companyCode}</code></p>
+        <p>2. Enter one of the usernames you just created</p>
+        <p>3. Enter the corresponding password</p>
+      </div>
+      <Button onClick={() => navigate("/login")} className="px-8 h-12">
         Go to Login <ChevronRight className="w-4 h-4 ml-1" />
       </Button>
     </div>
@@ -355,10 +514,13 @@ export default function SetupWizard() {
   const canProceed = () => {
     if (step === 1) return !!state.dataPath.trim();
     if (step === 2) return state.licenseVerified;
+    if (step === 3) return !!(state.companyName.trim() && state.ownerName.trim());
     return true;
   };
 
-  const isLastInputStep = step === 3;
+  // Step 4 (Create Users) has its own submit button; step 5 (Complete) has no nav
+  const isLastInputStep = step === 4;
+  const isCompleteStep = step === 5;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -376,7 +538,7 @@ export default function SetupWizard() {
               <span className={cn("text-xs hidden sm:block", i === step ? "text-foreground font-medium" : "text-muted-foreground")}>
                 {s}
               </span>
-              {i < STEPS.length - 1 && <div className="w-6 h-px bg-muted mx-1" />}
+              {i < STEPS.length - 1 && <div className="w-4 h-px bg-muted mx-1" />}
             </div>
           ))}
         </div>
@@ -386,12 +548,17 @@ export default function SetupWizard() {
             {step === 0 && renderWelcome()}
             {step === 1 && renderDataFolder()}
             {step === 2 && renderLicense()}
-            {step === 3 && renderOwnerAccount()}
-            {step === 4 && renderComplete()}
+            {step === 3 && renderCompanyDetails()}
+            {step === 4 && renderCreateUsers()}
+            {step === 5 && renderComplete()}
 
-            {step < 4 && (
+            {!isCompleteStep && (
               <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={() => setStep(s => s - 1)} disabled={step === 0 || loading}>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(s => s - 1)}
+                  disabled={step === 0 || loading}
+                >
                   <ChevronLeft className="w-4 h-4 mr-1" />Back
                 </Button>
                 {!isLastInputStep && (

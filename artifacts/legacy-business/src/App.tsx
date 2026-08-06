@@ -43,6 +43,7 @@ import SuperNotifications from "./pages/super/SuperNotifications";
 import Messaging from "./pages/Messaging";
 import Ledger from "./pages/Ledger";
 import SetupWizard from "./pages/SetupWizard";
+import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -63,18 +64,20 @@ function SuperRoute({ component: Component }: { component: React.ComponentType }
   return <SuperAdminLayout><Component /></SuperAdminLayout>;
 }
 
-function HomeRedirect() {
+function HomeRoute() {
   const { isAuthenticated, isLoading, isSuperAdmin } = useAuth();
   if (isLoading) return <div className="flex h-screen items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
-  if (!isAuthenticated) return <Redirect to="/login" />;
-  if (isSuperAdmin) return <Redirect to="/super/dashboard" />;
-  return <Redirect to="/dashboard" />;
+  // If already authenticated, send to the right place
+  if (isAuthenticated && isSuperAdmin) return <Redirect to="/super/dashboard" />;
+  if (isAuthenticated) return <Redirect to="/dashboard" />;
+  // Not authenticated — show home page with Login + Registration buttons
+  return <Landing />;
 }
 
 function AppRoutes() {
   return (
     <Switch>
-      <Route path="/" component={HomeRedirect} />
+      <Route path="/" component={HomeRoute} />
       <Route path="/setup" component={SetupWizard} />
       <Route path="/login" component={LoginPage} />
       <Route path="/super" component={SuperLoginPage} />

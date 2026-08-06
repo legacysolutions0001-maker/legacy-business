@@ -154,8 +154,8 @@ function createMainWindow() {
     },
   });
 
-  // Owner App always opens to Super Admin login
-  const url = `http://127.0.0.1:${frontendPort}/super/login`;
+  // Owner App always opens to Super Admin login page (/super is the correct route)
+  const url = `http://127.0.0.1:${frontendPort}/super`;
   mainWindow.loadURL(url);
 
   mainWindow.once('ready-to-show', () => {
@@ -165,10 +165,6 @@ function createMainWindow() {
     }
     mainWindow.show();
     mainWindow.focus();
-    if (settings.firstLaunch) {
-      settings.firstLaunch = false;
-      saveSettings(settings);
-    }
   });
 
   mainWindow.on('close', (e) => {
@@ -218,6 +214,66 @@ function showApp() {
   }
 }
 
+// ─── PostgreSQL Auto-Detection and Setup ─────────────────────────────────────
+async function ensurePostgres() {
+  const { exec } = require('child_process');
+  const net = require('net');
+
+  function canConnectToPg(port = 5432) {
+    return new Promise((resolve) => {
+      const sock = net.connect({ port, host: '127.0.0.1' }, () => { sock.destroy(); resolve(true); });
+      sock.on('error', () => resolve(false));
+      sock.setTimeout(2000, () => { sock.destroy(); resolve(false); });
+    });
+  }
+
+  const isRunning = await canConnectToPg(5432);
+  if (isRunning) {
+    logElectron('✓ PostgreSQL is already running on port 5432');
+    return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+  }
+
+  logElectron('PostgreSQL not running — attempting to start service automatically...');
+
+  if (process.platform === 'win32') {
+    const serviceNames = [
+      'postgresql-x64-17', 'postgresql-x64-16', 'postgresql-x64-15',
+      'postgresql-x64-14', 'postgresql-x64-13', 'postgresql-x64-12',
+    ];
+    for (const svc of serviceNames) {
+      const started = await new Promise((resolve) => {
+        exec(`net start "${svc}"`, (err, stdout, stderr) => {
+          const out = stdout + stderr;
+          resolve(!err || out.includes('already') || out.includes('running'));
+        });
+      });
+      if (started) {
+        await new Promise(r => setTimeout(r, 3000));
+        if (await canConnectToPg(5432)) {
+          logElectron(`✓ PostgreSQL service started: ${svc}`);
+          return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+        }
+      }
+    }
+
+    const result = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'PostgreSQL Required',
+      message: 'PostgreSQL is not installed or not running.',
+      detail: 'Please install PostgreSQL from https://www.postgresql.org/download/windows/ and restart this application.',
+      buttons: ['Download PostgreSQL', 'Quit'],
+      defaultId: 0,
+    });
+    if (result.response === 0) shell.openExternal('https://www.postgresql.org/download/windows/');
+    app.quit();
+    return null;
+  }
+
+  exec('systemctl start postgresql 2>/dev/null || service postgresql start 2>/dev/null || brew services start postgresql 2>/dev/null', () => {});
+  await new Promise(r => setTimeout(r, 2000));
+  return settings.databaseUrl || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+}
+
 // ─── Backend (Express API) ────────────────────────────────────────────────────
 async function startBackend() {
   apiPort = await findFreePort(8090);
@@ -231,10 +287,9 @@ async function startBackend() {
     }
   }
 
-  const databaseUrl =
-    settings.databaseUrl ||
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5432/legacy_erp';
+  // Auto-detect and start PostgreSQL if needed
+  const databaseUrl = await ensurePostgres();
+  if (!databaseUrl) return; // User chose to quit
 
   const env = {
     ...process.env,
@@ -254,7 +309,7 @@ async function startBackend() {
     FIREBASE_SERVICE_ACCOUNT_JSON: firebaseSaJson,
     FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'legacy-business-erp',
     FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET || 'legacy-business-erp.firebasestorage.app',
-    SUPER_ADMIN_USERNAME: process.env.SUPER_ADMIN_USERNAME || 'bhullar01',
+    SUPER_ADMIN_USERNAME: process.env.SUPER_ADMIN_USERNAME || settings.superAdminUsername || 'bhullar_01',
     SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD || settings.superAdminPassword || 'Bhullar_01',
     BACKUP_DIR: settings.backupFolder || BACKUP_DIR_DEFAULT,
     MIGRATIONS_DIR: MIGRATIONS,
@@ -519,6 +574,37 @@ if (!gotLock) {
     logElectron(`FRONTEND exists: ${fs.existsSync(FRONTEND)}`);
 
     nativeTheme.themeSource = settings.theme || 'dark';
+
+    // ── First launch: ask where to store daily backups ──────────────────────
+    if (settings.firstLaunch) {
+      const backupResult = await dialog.showMessageBox({
+        type: 'question',
+        title: 'Legacy Business Owner — First Launch Setup',
+        message: 'Where do you want to store daily backups?',
+        detail: 'Please choose a backup folder. The default is your Documents folder.',
+        buttons: ['Choose Folder', 'Use Default Location'],
+        defaultId: 1,
+      });
+
+      let backupFolder = BACKUP_DIR_DEFAULT;
+      if (backupResult.response === 0) {
+        const folderResult = await dialog.showOpenDialog({
+          properties: ['openDirectory', 'createDirectory'],
+          title: 'Select Backup Folder',
+          defaultPath: app.getPath('documents'),
+          buttonLabel: 'Use This Folder',
+        });
+        if (!folderResult.canceled && folderResult.filePaths.length > 0) {
+          backupFolder = folderResult.filePaths[0];
+        }
+      }
+
+      settings.backupFolder = backupFolder;
+      settings.firstLaunch = false;
+      saveSettings(settings);
+      logElectron(`✓ Backup folder set to: ${backupFolder}`);
+      try { fs.mkdirSync(backupFolder, { recursive: true }); } catch {}
+    }
 
     createSplash();
 
