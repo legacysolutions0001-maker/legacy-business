@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^26.15.3"
   },
   "build": {
     "appId": "com.legacysolutions.owner",
@@ -38,6 +38,11 @@
       {
         "from": "../artifacts/api-server/dist",
         "to": "api-server/dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../artifacts/api-server/dist/node_modules",
+        "to": "api-server/dist/node_modules",
         "filter": ["**/*"]
       },
       {
@@ -63,7 +68,6 @@
       ],
       "icon": "icons/icon.ico",
       "requestedExecutionLevel": "requireAdministrator",
-      "publisherName": "Legacy Solutions",
       "legalTrademarks": "Legacy Solutions"
     },
     "nsis": {
@@ -88,6 +92,7 @@
     "portable": {
       "artifactName": "Legacy Business Owner Portable.exe"
     },
+    "disableDefaultIgnoredFiles": true,
     "linux": {
       "target": ["AppImage", "deb"],
       "icon": "icons/icon.png",
