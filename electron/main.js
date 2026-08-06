@@ -155,8 +155,7 @@ function createMainWindow() {
     },
   });
 
-  const url = `http://127.0.0.1:${frontendPort}`;
-  mainWindow.loadURL(url);
+  mainWindow.loadURL(`http://127.0.0.1:${frontendPort}/`);
 
   mainWindow.once('ready-to-show', () => {
     if (splashWindow && !splashWindow.isDestroyed()) {
@@ -209,6 +208,12 @@ function createTray() {
 
 function showApp() {
   if (mainWindow) {
+    // The window is hidden in the tray when the user closes it. Start
+    // unauthenticated reopen flows at Home; the renderer's existing session
+    // check redirects valid sessions to the appropriate dashboard.
+    if (!mainWindow.isVisible()) {
+      mainWindow.loadURL(`http://127.0.0.1:${frontendPort}/`);
+    }
     mainWindow.show();
     mainWindow.focus();
   }

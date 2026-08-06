@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Database, HardDrive, Usb, Cloud, Network, ChevronRight,
   ChevronLeft, CheckCircle, Loader2, FolderOpen, Key, User, Shield,
-  Building2, Phone, Mail, Users,
+  Building2, Phone, Mail, Users, Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -525,6 +525,18 @@ export default function SetupWizard() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
+        <div className="mb-6 flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/")}
+            disabled={loading}
+          >
+            <Home className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
+        </div>
+
         {/* Progress */}
         <div className="flex items-center justify-center gap-1 mb-8 flex-wrap">
           {STEPS.map((s, i) => (
